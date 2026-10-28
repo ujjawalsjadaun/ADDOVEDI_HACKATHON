@@ -67,14 +67,38 @@ REST is authoritative. Socket.IO only signals "something changed"; clients refet
 │  └─ test/                unit/, integration/, concurrency/ (Vitest + Supertest + mongodb-memory-server replset)
 ├─ client/
 │  └─ src/
-│     ├─ app/              router, providers, guarded layouts
-│     ├─ features/         auth, hospital, donor, public-checker, admin, coordinator, maps, notifications
-│     ├─ components/ui/    accessible primitives + Loading/Empty/Error/Unauthorized/Offline states
-│     └─ lib/              api client (envelope + error normalisation), realtime client, formatters
+│     ├─ main.tsx          React entry
+│     ├─ index.css         Tailwind + design tokens + component classes
+│     ├─ app/              router, query client, route guards, NotFoundPage
+│     ├─ features/<area>/  one folder per area: home, public-checker, auth, hospital, donor,
+│     │                    coordinator, admin, maps, notifications
+│     ├─ components/
+│     │  ├─ layout/        AppLayout, header/footer pieces (ApiStatus, OfflineBanner)
+│     │  └─ ui/            reusable primitives + Loading/Empty/Error/Unauthorized states, ComingSoon
+│     └─ lib/
+│        ├─ api/           fetch client (envelope + error normalisation)
+│        ├─ hooks/         generic hooks (useOnlineStatus, …)
+│        └─ realtime/      Socket.IO client (Phase 9)
 └─ docs/
 ```
 
-Each server module follows `*.model.ts` (Mongoose), `*.service.ts` (business rules, transactions), `*.routes.ts` (HTTP + auth + validation only), `*.dto.ts` (allow-listed serializers). Route handlers never set status fields directly; they call a service which goes through the transition table.
+### Folder rules
+
+These keep the structure predictable as phases add code:
+
+| Where | Rule |
+| --- | --- |
+| `shared/src/` | Only things both sides need: enums, API types, Zod request schemas. No Node or browser APIs. |
+| `server/src/modules/<feature>/` | One folder per business feature. Files are named `<feature>.<role>.ts`: `.model.ts` (Mongoose schema), `.service.ts` (business rules, transactions), `.routes.ts` (HTTP wiring: auth, validation, response only), `.dto.ts` (allow-listed serializers), `.policy.ts` (permission checks) when needed. |
+| `server/src/middleware/` | Cross-cutting Express middleware only (auth, rate limit, validation, errors). |
+| `server/src/lib/` | Framework-level helpers with no business rules (db, errors, http, logger, crypto). |
+| `server/src/providers/<kind>/` | `<kind>.provider.ts` interface + one file per implementation (`simulated.ts`, `openMeteo.ts`, …). |
+| `server/src/scripts/` | Operator CLI commands run with `npm run <script> -w server` (e.g. `create-admin`). |
+| `client/src/features/<area>/` | Pages (`*Page.tsx`), area-only components, and the area's API hooks (`api.ts`). An area never imports another area's internals; move shared pieces to `components/` or `lib/`. |
+| `client/src/components/` | Reusable, area-agnostic UI only. |
+| Naming | React components `PascalCase.tsx`; everything else `camelCase.ts`; folders `kebab-case`. |
+
+Route handlers never set status fields directly; they call a service which goes through the transition table.
 
 ## 3. Core flow (thin vertical slice)
 

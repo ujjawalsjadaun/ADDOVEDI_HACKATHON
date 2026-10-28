@@ -40,6 +40,7 @@ Lists add `meta.page`, `meta.limit`, `meta.total`. Query: `?page=1&limit=20` (ma
 | 409 | `SLOTS_FILLED` | accept after all slots taken |
 | 409 | `DONOR_BUSY` | donor already has an active assignment |
 | 409 | `DUPLICATE_REVIEW_PENDING` | verify attempted while review pending |
+| 415 | `UNSUPPORTED_MEDIA_TYPE` | mutation without `Content-Type: application/json` (CSRF defence, security.md §2) |
 | 422 | `VALIDATION_FAILED` | field errors in `fields` |
 | 422 | `IDEMPOTENCY_KEY_REUSED` | same key, different body |
 | 422 | `SELF_VERIFICATION_NOT_ALLOWED` | creator verifying own request with `REQUIRE_SEPARATE_VERIFIER` |
@@ -61,7 +62,7 @@ Role key: **PUB** public · **ADM** admin · **HS** hospital staff · **HV** hos
 | Method & path | Role | Notes |
 | --- | --- | --- |
 | `GET /health/live` | PUB | `{ status: 'ok' }` — process only |
-| `GET /health/ready` | PUB | `{ db: 'up'|'down', providers: { routing, weather, sms: 'simulated'|'up'|'down' } }` — no secrets |
+| `GET /health/ready` | PUB | `200`/`503` `{ status: 'ready'|'degraded', db: 'up'|'down', demoMode, providers: { routing, weather, sms: 'simulated'|'up'|'down'|'unchecked' } }` — no secrets. `unchecked` = real provider configured but no probe yet |
 
 ### Auth
 | Method & path | Role | Body → Response |

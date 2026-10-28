@@ -1,0 +1,16 @@
+{
+  "name": "@golden-hour/shared",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Enums, Zod schemas and API types shared by server and client. Consumed as TypeScript source.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "zod": "^4.6.7"
+  }
+}

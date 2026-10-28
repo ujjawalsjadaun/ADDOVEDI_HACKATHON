@@ -23,6 +23,10 @@ Each entry: decision, why, and whether it needs review by a domain partner befor
 | D-17 | 2026-10-29 | 3 no-show strikes in 180 days → donor placed under admin review (not banned). | Pitch mentions strikes/review; avoids automatic punishment. | Partner review |
 | D-18 | 2026-10-29 | Family-lead OTP verification deferred; lead stays `pending` and can never alert donors regardless. | Safety boundary holds without OTP; saves time. | — |
 
+| D-19 | 2026-10-29 | Dependency majors chosen to clear `npm audit`: Zod 4 (fixes high-severity memory exhaustion in Zod 3), React Router 7 (open-redirect advisory in 6), Vitest 5 (tinypool/mocker advisories in 3). Remaining: one **low** esbuild advisory via `tsup`'s pinned esbuild 0.27.x — affects only esbuild's `serve` mode, which tsup never uses; npm 9 could not apply an override. Re-check when tsup updates. | Starting greenfield made the upgrade cheap; auditing is part of the evidence standard. | — |
+| D-20 | 2026-10-29 | Server starts even if the first DB connection fails, reports `degraded`, and retries every 15 s; mutations fail closed. | Hosts restart before Atlas is reachable; health must be truthful rather than the process crash-looping. | — |
+| D-21 | 2026-10-29 | `shared` is consumed as TypeScript source (no build step); the server bundle (`tsup`) inlines it, Vite compiles it for the client. | Keeps contracts in one place without a separate build/watch step. | — |
+
 ## Open questions (non-blocking; defaults above apply)
 
 1. Should a hospital be able to confirm fulfillment with fewer units than requested (partial)? Default: yes, `unitsReceived` recorded.
