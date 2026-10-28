@@ -64,8 +64,8 @@ One or more commits per phase, each at a passing gate (blueprint J1 step 9):
 
 Commit messages follow Conventional Commits (`feat:`, `fix:`, `docs:`, `test:`, `chore:`). Each push happens only after that phase's verification step passes.
 
-## 6. Open decisions for the user before Phase 1
+## 6. Decisions (confirmed by user, 2026-10-29)
 
-1. GitHub remote URL for this repository.
-2. Database for development/demo: MongoDB Atlas free tier (recommended), or install MongoDB Community locally.
-3. Branching: commit straight to `main` per phase, or one branch per phase merged into `main`.
+1. **GitHub remote:** user will create an empty repository and supply the URL; until then commits stay local.
+2. **Database:** MongoDB Atlas free tier for development and demo (replica set, so transactions are available). Connection string lives only in the git-ignored `server/.env`. Automated tests use `mongodb-memory-server` in replica-set mode.
+3. **Branching:** commit directly to `main`, one or more commits per phase, each at a passing gate.
