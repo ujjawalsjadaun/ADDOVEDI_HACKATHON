@@ -4,20 +4,25 @@ import { NotFoundPage } from './NotFoundPage';
 import { RequireRole } from './RequireRole';
 import { HomePage } from '../features/home/HomePage';
 import { LoginPage } from '../features/auth/LoginPage';
+import { RegisterDonorPage } from '../features/auth/RegisterDonorPage';
 import { CheckerPage } from '../features/public-checker/CheckerPage';
+import { RequestDetailPage } from '../features/requests/RequestDetailPage';
 import { HospitalPage } from '../features/hospital/HospitalPage';
+import { HospitalDashboardPage } from '../features/hospital/HospitalDashboardPage';
 import { RequestsListPage } from '../features/hospital/RequestsListPage';
 import { NewRequestPage } from '../features/hospital/NewRequestPage';
-import { RequestDetailPage } from '../features/hospital/RequestDetailPage';
 import { DonorPage } from '../features/donor/DonorPage';
 import { DonorHomePage } from '../features/donor/DonorHomePage';
 import { DonorProfilePage } from '../features/donor/DonorProfilePage';
-import { RegisterDonorPage } from '../features/auth/RegisterDonorPage';
-import { DonorsPanel } from '../features/admin/DonorsPanel';
 import { CoordinatorPage } from '../features/coordinator/CoordinatorPage';
 import { AdminPage } from '../features/admin/AdminPage';
+import { OverviewPanel } from '../features/admin/OverviewPanel';
+import { RequestsPanel } from '../features/admin/RequestsPanel';
 import { HospitalsPanel } from '../features/admin/HospitalsPanel';
 import { UsersPanel } from '../features/admin/UsersPanel';
+import { DonorsPanel } from '../features/admin/DonorsPanel';
+import { ReportsPanel } from '../features/admin/ReportsPanel';
+import { AuditPanel } from '../features/admin/AuditPanel';
 
 export const routes: RouteObject[] = [
   {
@@ -36,9 +41,10 @@ export const routes: RouteObject[] = [
           </RequireRole>
         ),
         children: [
-          { index: true, element: <RequestsListPage /> },
+          { index: true, element: <HospitalDashboardPage /> },
+          { path: 'requests', element: <RequestsListPage /> },
           { path: 'requests/new', element: <NewRequestPage /> },
-          { path: 'requests/:id', element: <RequestDetailPage /> },
+          { path: 'requests/:id', element: <RequestDetailPage basePath="/hospital/requests" /> },
           { path: '*', element: <NotFoundPage /> },
         ],
       },
@@ -71,10 +77,16 @@ export const routes: RouteObject[] = [
           </RequireRole>
         ),
         children: [
-          { index: true, element: <Navigate to="hospitals" replace /> },
+          { index: true, element: <Navigate to="overview" replace /> },
+          { path: 'overview', element: <OverviewPanel /> },
+          { path: 'requests', element: <RequestsPanel /> },
+          { path: 'requests/:id', element: <RequestDetailPage basePath="/admin/requests" /> },
           { path: 'hospitals', element: <HospitalsPanel /> },
           { path: 'users', element: <UsersPanel /> },
           { path: 'donors', element: <DonorsPanel /> },
+          { path: 'reports', element: <ReportsPanel /> },
+          { path: 'audit', element: <AuditPanel /> },
+          { path: '*', element: <NotFoundPage /> },
         ],
       },
       { path: '*', element: <NotFoundPage /> },

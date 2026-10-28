@@ -7,7 +7,7 @@ import { ApiError } from '../../lib/api/client';
 import { toDateTimeLocalValue } from '../../lib/format';
 import { newIdempotencyKey } from '../../lib/idempotency';
 import { useCreateRequest } from './api';
-import { URGENCY_LABEL, URGENCY_TONE } from './labels';
+import { URGENCY_LABEL, URGENCY_TONE } from '../../lib/labels';
 
 export function NewRequestPage() {
   const navigate = useNavigate();
@@ -60,7 +60,7 @@ export function NewRequestPage() {
   return (
     <section className="mx-auto max-w-2xl space-y-4">
       <div>
-        <Link to="/hospital" className="text-sm text-slate-600 hover:underline">
+        <Link to="/hospital/requests" className="text-sm text-slate-600 hover:underline">
           ← Back to requests
         </Link>
         <h2 className="mt-1 text-lg font-semibold">New blood request</h2>
@@ -157,7 +157,7 @@ export function NewRequestPage() {
           <button type="submit" className="btn-primary" disabled={create.isPending}>
             {create.isPending ? 'Submitting…' : 'Submit for verification'}
           </button>
-          <Link to="/hospital" className="btn-secondary">
+          <Link to="/hospital/requests" className="btn-secondary">
             Cancel
           </Link>
         </div>

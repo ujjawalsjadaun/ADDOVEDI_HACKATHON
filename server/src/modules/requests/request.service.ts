@@ -228,7 +228,9 @@ export async function listRequests(
       .limit(query.limit),
     BloodRequestModel.countDocuments(filter),
   ]);
-  return { items: docs.map(toRequestSummary), total };
+  const facilities = await HospitalModel.find({ _id: { $in: [...new Set(docs.map((d) => d.facilityId.toString()))] } }).select('name');
+  const names = new Map(facilities.map((f) => [f._id.toString(), f.name]));
+  return { items: docs.map((d) => toRequestSummary(d, names.get(d.facilityId.toString()) ?? null)), total };
 }
 
 export async function getRequestDetail(id: string, user: AuthUser, config: Config): Promise<RequestDetail> {

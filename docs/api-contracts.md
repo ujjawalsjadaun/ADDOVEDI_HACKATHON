@@ -85,10 +85,19 @@ Role key: **PUB** public · **ADM** admin · **HS** hospital staff · **HV** hos
 | `POST /admin/users/:id/status` | ADM | `{ status: active|paused|suspended, reason }`; pause/suspend bumps `tokenVersion` (signs the user out everywhere); an admin cannot change their own status |
 | `POST /admin/donors/:userId/verification` | ADM | `{ decision: verified|unverified, reason }` |
 | `POST /admin/donors/:userId/review` | ADM | `{ decision: ok|under_review, reason }` (strikes) |
-| `GET /admin/audit?resourceType=&resourceId=&action=&from=&to=` | ADM | paginated |
-| `GET /admin/escalations?open=true` | ADM | escalation queue |
-| `GET /admin/suspicious-reports` | ADM | |
-| `GET /admin/overview` | ADM | counts: pending facilities, overdue verifications, open escalations, failed notifications |
+| `GET /admin/audit?action=&resourceType=&resourceId=&facilityId=&result=&from=&to=` | ADM | paginated `AuditEntryView[]`, newest first; `action` is a prefix match (e.g. `request.`) |
+| `GET /admin/escalations?open=true` | ADM | escalation queue (Phase 10) |
+| `GET /admin/suspicious-reports?status=open|reviewed` | ADM | paginated `SuspiciousReportView[]` incl. matched request and same-source count (24 h, keyed IP hash) |
+| `POST /admin/suspicious-reports/:id/review` | ADM | `{ reason }` → marks reviewed, audited as `report.reviewed` |
+| `GET /admin/overview` | ADM | `AdminOverview`: counts (pending facilities, unverified donors, donors under review, overdue verifications, active requests, requests without responders, open reports, failed logins 24 h) + lists of overdue verifications and requests without responders |
+
+### Dashboards (read models; never change state)
+| Method & path | Role | Notes |
+| --- | --- | --- |
+| `GET /dashboard/hospital` | HS | `HospitalDashboard` for the user's facility: counts, `needsAction` (with reasons), `donorsInProgress` |
+| `GET /dashboard/coordinator` | CO, ADM | `CoordinatorRequestView[]` — active **verified** requests; facility, blood group, urgency, units, deadline, donors travelling. No patient label/note, no donor identity |
+
+All dashboard payloads carry `generatedAt`; the UI shows the age of every live view and warns when it is stale or offline.
 
 ### Hospitals (public-safe)
 | `GET /hospitals?district=` | PUB | verified facilities only: `{ id, name, facilityType, district, location }` |

@@ -1,6 +1,10 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type {
   AdminDonorView,
+  AdminOverview,
+  AuditEntryView,
+  RequestSummary,
+  SuspiciousReportView,
   CreateHospitalInput,
   DonorReviewStatus,
   DonorVerificationStatus,
@@ -13,19 +17,15 @@ import type {
   UserStatusInput,
 } from '@golden-hour/shared';
 import { api } from '../../lib/api/client';
+import { toQueryString } from '../../lib/api/queryString';
 
 const HOSPITALS_KEY = ['admin', 'hospitals'] as const;
 const USERS_KEY = ['admin', 'users'] as const;
 
-function qs(params: Record<string, string | number | undefined>): string {
-  const entries = Object.entries(params).filter(([, v]) => v !== undefined && v !== '') as [string, string][];
-  return entries.length ? `?${new URLSearchParams(entries.map(([k, v]) => [k, String(v)]))}` : '';
-}
-
 export function useAdminHospitals(filter: { verificationStatus?: HospitalVerificationStatus; page?: number; limit?: number }) {
   return useQuery({
     queryKey: [...HOSPITALS_KEY, filter],
-    queryFn: () => api<HospitalAdmin[]>(`/admin/hospitals${qs(filter)}`),
+    queryFn: () => api<HospitalAdmin[]>(`/admin/hospitals${toQueryString(filter)}`),
     placeholderData: keepPreviousData,
   });
 }
@@ -51,7 +51,7 @@ export function useHospitalDecision() {
 export function useAdminUsers(filter: { role?: UserRole; page?: number; limit?: number }) {
   return useQuery({
     queryKey: [...USERS_KEY, filter],
-    queryFn: () => api<UserAdmin[]>(`/admin/users${qs(filter)}`),
+    queryFn: () => api<UserAdmin[]>(`/admin/users${toQueryString(filter)}`),
     placeholderData: keepPreviousData,
   });
 }
@@ -81,7 +81,7 @@ const DONORS_KEY = ['admin', 'donors'] as const;
 export function useAdminDonors(filter: { verificationStatus?: DonorVerificationStatus; reviewStatus?: DonorReviewStatus; limit?: number }) {
   return useQuery({
     queryKey: [...DONORS_KEY, filter],
-    queryFn: () => api<AdminDonorView[]>(`/admin/donors${qs(filter)}`),
+    queryFn: () => api<AdminDonorView[]>(`/admin/donors${toQueryString(filter)}`),
     placeholderData: keepPreviousData,
   });
 }
@@ -92,5 +92,60 @@ export function useDonorDecision() {
     mutationFn: async ({ userId, kind, decision, reason }: { userId: string; kind: 'verification' | 'review'; decision: string; reason: string }) =>
       (await api<AdminDonorView>(`/admin/donors/${userId}/${kind}`, { method: 'POST', body: { decision, reason } })).data,
     onSettled: () => queryClient.invalidateQueries({ queryKey: DONORS_KEY }),
+  });
+}
+
+export function useAdminOverview() {
+  return useQuery({
+    queryKey: ['admin', 'overview'],
+    queryFn: async () => (await api<AdminOverview>('/admin/overview')).data,
+    refetchInterval: 30_000,
+  });
+}
+
+export function useAdminRequests(filter: { active?: 'true' | 'false'; requestStatus?: string; page?: number; limit?: number }) {
+  return useQuery({
+    queryKey: ['requests', 'list', 'admin', filter],
+    queryFn: () => api<RequestSummary[]>(`/requests${toQueryString(filter)}`),
+    placeholderData: keepPreviousData,
+    refetchInterval: 30_000,
+  });
+}
+
+export interface AuditFilter {
+  action?: string;
+  resourceType?: 'user' | 'hospital' | 'bloodRequest';
+  result?: 'success' | 'denied' | 'failed';
+  page?: number;
+  limit?: number;
+}
+
+export function useAuditLog(filter: AuditFilter) {
+  return useQuery({
+    queryKey: ['admin', 'audit', filter],
+    queryFn: () => api<AuditEntryView[]>(`/admin/audit${toQueryString({ ...filter })}`),
+    placeholderData: keepPreviousData,
+  });
+}
+
+const REPORTS_KEY = ['admin', 'reports'] as const;
+
+export function useSuspiciousReports(status: 'open' | 'reviewed' | undefined) {
+  return useQuery({
+    queryKey: [...REPORTS_KEY, status],
+    queryFn: () => api<SuspiciousReportView[]>(`/admin/suspicious-reports${toQueryString({ status, limit: 50 })}`),
+    placeholderData: keepPreviousData,
+  });
+}
+
+export function useReviewReport() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason: string }) =>
+      api(`/admin/suspicious-reports/${id}/review`, { method: 'POST', body: { reason } }),
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: REPORTS_KEY });
+      void queryClient.invalidateQueries({ queryKey: ['admin', 'overview'] });
+    },
   });
 }

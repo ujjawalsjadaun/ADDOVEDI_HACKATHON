@@ -1,4 +1,5 @@
 import { Link, useLocation, useParams } from 'react-router';
+import { DataFreshness } from '../../components/ui/DataFreshness';
 import { ErrorState, LoadingState } from '../../components/ui/states';
 import { StatusBadge } from '../../components/ui/StatusBadge';
 import { formatDateTime, relativeTime } from '../../lib/format';
@@ -7,25 +8,35 @@ import { AssignmentsPanel } from './components/AssignmentsPanel';
 import { CandidatesPanel } from './components/CandidatesPanel';
 import { RequestActions } from './components/RequestActions';
 import { Timeline } from './components/Timeline';
-import { requestState, URGENCY_LABEL, URGENCY_TONE } from './labels';
+import { requestState, URGENCY_LABEL, URGENCY_TONE } from '../../lib/labels';
 
-export function RequestDetailPage() {
+/** Shared by the hospital area and the admin area (`basePath` decides where links go). */
+export function RequestDetailPage({ basePath = '/hospital/requests' }: { basePath?: string }) {
   const { id = '' } = useParams();
   const location = useLocation();
   const flash = location.state as { created?: boolean; possibleDuplicate?: boolean } | null;
   const query = useRequest(id);
 
   if (query.isPending) return <LoadingState />;
-  if (query.isError) return <ErrorState error={query.error} onRetry={() => void query.refetch()} />;
-  const r = query.data;
+  if (query.isError && !query.data) return <ErrorState error={query.error} onRetry={() => void query.refetch()} />;
+  const r = query.data!;
   const state = requestState(r);
   const active = r.requestStatus !== 'closed';
 
   return (
     <article className="space-y-4">
-      <Link to="/hospital" className="text-sm text-slate-600 hover:underline">
-        ← Back to requests
-      </Link>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <Link to={basePath} className="text-sm text-slate-600 hover:underline">
+          ← Back to requests
+        </Link>
+        <DataFreshness
+          updatedAt={query.dataUpdatedAt}
+          staleAfterMs={60_000}
+          isFetching={query.isFetching}
+          isError={query.isError}
+          onRefresh={() => void query.refetch()}
+        />
+      </div>
 
       {flash?.created && (
         <p role="status" className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
@@ -93,7 +104,7 @@ export function RequestDetailPage() {
           <ul className="mt-2 space-y-1 text-sm">
             {r.duplicateReview.candidates.map((c) => (
               <li key={c.id}>
-                <Link to={`/hospital/requests/${c.id}`} className="font-mono text-brand-700 underline">
+                <Link to={`${basePath}/${c.id}`} className="font-mono text-brand-700 underline">
                   {c.publicCode}
                 </Link>{' '}
                 · {c.bloodGroup}

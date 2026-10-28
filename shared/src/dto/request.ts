@@ -17,6 +17,8 @@ export interface RequestSummary {
   id: string;
   publicCode: string;
   facilityId: string;
+  /** Filled in list views (admins see several facilities). */
+  facilityName: string | null;
   bloodGroup: BloodGroup;
   acceptCompatibleGroups: boolean;
   unitsRequested: number;

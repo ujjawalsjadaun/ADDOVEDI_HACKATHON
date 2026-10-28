@@ -5,7 +5,7 @@ import { StatusBadge } from '../../components/ui/StatusBadge';
 import { formatDateTime, relativeTime } from '../../lib/format';
 import { useMe } from '../auth/api';
 import { useRequests, type RequestFilter } from './api';
-import { requestState, URGENCY_LABEL, URGENCY_TONE } from './labels';
+import { requestState, URGENCY_LABEL, URGENCY_TONE } from '../../lib/labels';
 
 const VIEWS: { id: string; label: string; filter: RequestFilter }[] = [
   { id: 'active', label: 'Active', filter: { active: 'true' } },

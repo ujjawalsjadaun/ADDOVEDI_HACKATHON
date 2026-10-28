@@ -2,7 +2,7 @@
 
 Hospital-led, location-aware blood-request coordination for hill districts. Verified requests reach the most reachable compatible donors, ranked by road travel time rather than straight-line distance, with fallbacks for weak connectivity.
 
-> **Status:** Phase 5 — end-to-end flow: hospital raises and verifies a request → ranked donors are alerted in-app → one donor per slot accepts (race-safe) → en route / arrived → hospital confirms donation and fulfilment. Travel times are a labelled simulation; SMS is not connected yet.
+> **Status:** Phase 6 — end-to-end flow (raise → verify → alert ranked donors in-app → race-safe accept → en route / arrived → donation → hospital-confirmed fulfilment) plus role dashboards: hospital "needs attention", admin overview / requests / audit log / suspicious reports, coordinator list. Travel times are a labelled simulation; SMS is not connected yet.
 > All donor, patient and facility data in this project is synthetic. This is not an official dispatch service and makes no medical eligibility decisions.
 
 ## Stack
@@ -28,7 +28,7 @@ Auth: HttpOnly session cookie (signed JWT with server-side revocation), bcrypt p
 │  │  ├─ middleware/  request id, JSON-only, authenticate, authorize, rate limit, error handler
 │  │  ├─ modules/     one folder per feature: health, auth, users, hospitals, admin, audit,
 │  │  │               requests, idempotency, public-checker, donors, matching, alerts,
-│  │  │               assignments (+ models.ts registry)
+│  │  │               assignments, dashboard (+ models.ts registry)
 │  │  ├─ providers/   external-service adapters (routing: interface + simulated)
 │  │  ├─ scripts/     operator commands (create-admin, db:indexes)
 │  │  ├─ types/       Express type augmentation
@@ -39,8 +39,10 @@ Auth: HttpOnly session cookie (signed JWT with server-side revocation), bcrypt p
 │  └─ src/
 │     ├─ app/         router, route guard (RequireRole), query client, not-found page
 │     ├─ features/    one folder per area: home, auth, public-checker, hospital, donor, coordinator, admin
-│     ├─ components/  layout/ (shell, status footer, offline banner) and ui/ (states, form fields, badges)
-│     └─ lib/         api/ (fetch client) and hooks/
+│     │               + requests/ (request detail shared by hospital and admin)
+│     ├─ components/  layout/ (shell, status footer, offline banner) and ui/ (states, forms, badges,
+│     │               stat cards, data-freshness, ETA)
+│     └─ lib/         api/ (fetch client, query strings), hooks/, format, labels, idempotency
 └─ docs/              architecture, contracts, state machines, security, decisions
 ```
 
@@ -122,6 +124,9 @@ The Vite dev server proxies `/api` to the API, so the browser sees one origin an
 | `POST /api/alerts/:id/respond` | donor (own alerts) |
 | `POST /api/assignments/:id/status` · `confirm-arrival` · `donated` · `no-show` | donor (own) / hospital staff (own facility) |
 | `/api/admin/donors` (list, `/:userId/verification`, `/:userId/review`) | admin |
+| `GET /api/dashboard/hospital` | hospital staff |
+| `GET /api/dashboard/coordinator` | coordinator, admin |
+| `GET /api/admin/overview`, `GET /api/admin/audit`, `/api/admin/suspicious-reports` (list, `/:id/review`) | admin |
 
 Full contracts: [docs/api-contracts.md](docs/api-contracts.md).
 
@@ -140,9 +145,8 @@ Full contracts: [docs/api-contracts.md](docs/api-contracts.md).
 
 - Alerts are **in-app only** (donors see them when they open the app); SMS arrives in Phase 9. Travel times use a labelled **simulation** (straight line × 1.8 at 25 km/h) until real routing and weather in Phase 7.
 - Alerts are not pushed in real time; pages refresh every 15–30 s until Socket.IO (Phase 9). The escalation ladder (automatic widening at 5/10/15 min) arrives in Phase 10 — until then the hospital uses **Alert more donors**.
-- The Coordinator area is still a placeholder.
-- Requests past their deadline stay open until the expiry worker (Phase 10); verification is refused after the deadline.
-- Suspicious-request reports are stored but the admin review screen arrives in Phase 10.
+- The Coordinator area lists active requests only; road reports, access points and transport tasks arrive in Phases 7–8.
+- Requests past their deadline stay open until the expiry worker (Phase 10); the hospital dashboard flags them ("Deadline passed — fulfil or cancel") and verification is refused after the deadline.
 - Rate limits are kept in memory, so they reset when the API restarts and are per-process.
 - Automated tests are out of scope from Phase 3 (decision D-26); each phase is verified manually.
 - `npm audit` reports one low-severity esbuild advisory (GHSA-g7r4-m6w7-qqqr) via `tsup`. It affects esbuild's own `serve` mode, which tsup does not use (D-19).

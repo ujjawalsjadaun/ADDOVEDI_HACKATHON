@@ -3,7 +3,7 @@ import { URGENCY_LEVELS, type RequestAction, type RequestDetail, type Urgency } 
 import { fieldError, FormError, SelectField, TextAreaField, TextField } from '../../../components/ui/form';
 import { ReasonForm } from '../../../components/ui/ReasonForm';
 import { useRequestAction } from '../api';
-import { URGENCY_LABEL } from '../labels';
+import { URGENCY_LABEL } from '../../../lib/labels';
 
 const BUTTONS: { action: RequestAction; label: string; danger?: boolean; primary?: boolean }[] = [
   { action: 'verify', label: 'Verify request', primary: true },

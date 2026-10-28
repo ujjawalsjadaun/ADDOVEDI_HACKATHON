@@ -18,6 +18,7 @@ import { publicCheckerRoutes } from './modules/public-checker/checker.routes';
 import { donorRoutes } from './modules/donors/donor.routes';
 import { alertRoutes } from './modules/alerts/alert.routes';
 import { assignmentRoutes } from './modules/assignments/assignment.routes';
+import { dashboardRoutes } from './modules/dashboard/dashboard.routes';
 
 export interface AppDeps {
   config: Config;
@@ -62,12 +63,13 @@ export function createApp({ config, logger }: AppDeps) {
   api.use(authenticate(config));
   api.use('/auth', authRoutes(config, logger));
   api.use('/hospitals', publicHospitalRoutes());
-  api.use('/admin', adminRoutes());
+  api.use('/admin', adminRoutes(config));
   api.use('/requests', requestRoutes(config));
   api.use('/public', publicCheckerRoutes(config));
   api.use('/donors', donorRoutes(config));
   api.use('/alerts', alertRoutes());
   api.use('/assignments', assignmentRoutes(config, logger));
+  api.use('/dashboard', dashboardRoutes());
   api.use(notFound);
 
   app.use('/api', api);

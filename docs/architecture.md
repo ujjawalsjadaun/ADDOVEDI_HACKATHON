@@ -96,6 +96,8 @@ These keep the structure predictable as phases add code:
 | `server/src/providers/<kind>/` | `<kind>.provider.ts` interface + one file per implementation (`simulated.ts`, `openMeteo.ts`, …). |
 | `server/src/scripts/` | Operator CLI commands run with `npm run <script> -w server` (e.g. `create-admin`). |
 | `client/src/features/<area>/` | Pages (`*Page.tsx`), area-only components, and the area's API hooks (`api.ts`). An area never imports another area's internals; move shared pieces to `components/` or `lib/`. |
+| `client/src/features/requests/` | The one cross-role feature: request detail page, its panels and hooks, used by both the hospital and admin areas (`basePath` prop). What each role may do comes from the server's `allowedActions`. |
+| `client/src/lib/labels.ts` | Human labels and badge tones for status values, shared by all areas. |
 | `client/src/components/` | Reusable, area-agnostic UI only. |
 | Naming | React components `PascalCase.tsx`; everything else `camelCase.ts`; folders `kebab-case`. |
 

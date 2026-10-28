@@ -50,6 +50,12 @@ Each entry: decision, why, and whether it needs review by a domain partner befor
 | D-40 | 2026-10-29 | Donor's phone is shown to the hospital only on assignments (after acceptance); the hospital's phone and map location are shown to the donor only after they accept. A donor sees their own rounded location; nobody else ever does. | Data minimisation (security.md §5). | — |
 | D-41 | 2026-10-29 | Changing blood group resets donor verification; turning off location consent deletes the stored location. | Blood group is the matching key; consent must be honoured, not just flagged. | — |
 
+| D-42 | 2026-10-29 | Dashboards are server-side read models (`/dashboard/*`, `/admin/overview`) polled every 20–30 s; every live view shows "Updated n ago" and turns amber when stale, offline or after a failed refresh. | Honest freshness without Socket.IO (Phase 9); never present polled data as live. | — |
+| D-43 | 2026-10-29 | "Requests without responders" = verified, awaiting donors, nobody accepted, and no unexpired pending alert. Shown to admins as a prompt to widen the search or redirect to blood banks. | Precursor to the escalation ladder (Phase 10), visible today. | — |
+| D-44 | 2026-10-29 | Coordinators see active **verified** requests across facilities with logistics fields only. | Coordinators are district-level; pitch boundary — no patient/donor identity. | Partner review |
+| D-45 | 2026-10-29 | Request detail moved to a cross-role `features/requests` module used by hospital and admin areas; status labels moved to `lib/labels.ts`. | Keeps the "areas never import each other" folder rule while sharing one detail view. | — |
+| D-46 | 2026-10-29 | Hospital landing page is the dashboard (`/hospital`); the full list moved to `/hospital/requests`. Admin landing page is the overview. | Put "what needs action now" first. | — |
+
 ## Open questions (non-blocking; defaults above apply)
 
 1. Should a hospital be able to confirm fulfillment with fewer units than requested (partial)? Default: yes, `unitsReceived` recorded.

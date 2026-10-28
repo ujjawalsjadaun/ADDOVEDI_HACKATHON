@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { Link } from 'react-router';
 import type { DonorAlertView, DonorAssignmentView } from '@golden-hour/shared';
+import { DataFreshness } from '../../components/ui/DataFreshness';
 import { EtaBadge } from '../../components/ui/EtaBadge';
 import { FormError, TextAreaField } from '../../components/ui/form';
 import { EmptyState, ErrorState, LoadingState } from '../../components/ui/states';
@@ -45,7 +46,16 @@ export function DonorHomePage() {
       ))}
 
       <section className="space-y-3">
-        <h2 className="text-lg font-semibold">Requests for you</h2>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-lg font-semibold">Requests for you</h2>
+          <DataFreshness
+            updatedAt={alerts.dataUpdatedAt}
+            staleAfterMs={45_000}
+            isFetching={alerts.isFetching}
+            isError={alerts.isError}
+            onRefresh={() => void alerts.refetch()}
+          />
+        </div>
         {alerts.isPending ? (
           <LoadingState />
         ) : alerts.isError ? (

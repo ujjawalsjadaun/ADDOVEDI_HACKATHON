@@ -16,11 +16,12 @@ import type { BloodRequestDocument } from './request.model';
 
 const iso = (d: Date | null | undefined) => (d ? d.toISOString() : null);
 
-export function toRequestSummary(doc: BloodRequestDocument): RequestSummary {
+export function toRequestSummary(doc: BloodRequestDocument, facilityName: string | null = null): RequestSummary {
   return {
     id: doc._id.toString(),
     publicCode: doc.publicCode,
     facilityId: doc.facilityId.toString(),
+    facilityName,
     bloodGroup: doc.bloodGroup,
     acceptCompatibleGroups: doc.acceptCompatibleGroups,
     unitsRequested: doc.unitsRequested,
@@ -63,7 +64,7 @@ export function toRequestDetail(
 ): RequestDetail {
   const name = (id: unknown) => (id ? (extra.names.get(String(id)) ?? null) : null);
   return {
-    ...toRequestSummary(doc),
+    ...toRequestSummary(doc, extra.facility.name),
     facility: toFacilitySummary(extra.facility),
     clinicalNote: doc.clinicalNote ?? null,
     urgencySuggested: doc.urgencySuggested,
