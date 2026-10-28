@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import {
+  accessPointSchema,
   createHospitalSchema,
   hospitalDecisionSchema,
   listHospitalsQuerySchema,
@@ -7,21 +8,28 @@ import {
 } from '@golden-hour/shared';
 import { sendData } from '../../lib/http';
 import { parse, parseId } from '../../lib/validation';
-import { actionContext } from '../../middleware/authorize';
+import { actionContext, requireRole } from '../../middleware/authorize';
 import {
   createHospital,
   decideHospitalVerification,
   getHospital,
   listHospitals,
   listVerifiedHospitals,
+  setAccessPoint,
 } from './hospital.service';
 
-/** GET /api/hospitals — verified facilities only, public-safe fields. */
+/** /api/hospitals — public list of verified facilities, plus the staff-only access-point update. */
 export function publicHospitalRoutes(): Router {
   const router = Router();
   router.get('/', async (req, res) => {
     const query = parse(publicHospitalsQuerySchema, req.query);
     sendData(res, await listVerifiedHospitals(query.district));
+  });
+
+  router.post('/:id/access-point', requireRole('hospital_staff', 'coordinator', 'admin'), async (req, res) => {
+    const input = parse(accessPointSchema, req.body);
+    await setAccessPoint(parseId(req.params.id), input, actionContext(res));
+    sendData(res, { updated: true });
   });
   return router;
 }

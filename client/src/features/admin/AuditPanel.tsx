@@ -42,6 +42,7 @@ export function AuditPanel() {
             { value: 'bloodRequest', label: 'Blood requests' },
             { value: 'hospital', label: 'Facilities' },
             { value: 'user', label: 'Accounts' },
+            { value: 'roadReport', label: 'Road reports' },
           ]}
         />
         <SelectField

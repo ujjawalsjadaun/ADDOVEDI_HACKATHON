@@ -56,6 +56,13 @@ Each entry: decision, why, and whether it needs review by a domain partner befor
 | D-45 | 2026-10-29 | Request detail moved to a cross-role `features/requests` module used by hospital and admin areas; status labels moved to `lib/labels.ts`. | Keeps the "areas never import each other" folder rule while sharing one detail view. | — |
 | D-46 | 2026-10-29 | Hospital landing page is the dashboard (`/hospital`); the full list moved to `/hospital/requests`. Admin landing page is the overview. | Put "what needs action now" first. | — |
 
+| D-47 | 2026-10-29 | Live routing via OpenRouteService (optional, `ROUTING_PROVIDER=openrouteservice` + key) wrapped in a Mongo route cache that preserves `calculatedAt`; on failure a labelled straight-line `rough_estimate`. Default stays `simulated`. | Real road ETA when available; honest fallback when not (blueprint D7). | — |
+| D-48 | 2026-10-29 | A road report changes an ETA only if it is **blocked**, current, not dismissed, and verified or high-confidence; it then makes the ETA unknown rather than guessing a detour. Other near reports add warnings. Coordinators cannot verify their own reports. | Unverified claims must not silently drive ranking (blueprint A7); a closure shouldn't produce an invented number. | Partner review |
+| D-49 | 2026-10-29 | "Near the route" uses a 2 km corridor around the straight donor→facility line, not the real road geometry. | Cheap, explainable, provider-independent; documented as an approximation. | — |
+| D-50 | 2026-10-29 | Weather: Open-Meteo current precipitation (optional) or a simulated fixed rain level; bands 0 / +15 % / +35 % from env; taken at the facility; cached ~15 min per ~10 km cell. Unavailable weather → no delay + warning. | Transparent, conservative adjustment (D-14). | — |
+| D-51 | 2026-10-29 | Map uses OpenStreetMap tiles via Leaflet `CircleMarker`s (no image assets); donor locations are never sent to any map. Map pages are lazy-loaded. | Privacy (security.md §5) and bundle size. | — |
+| D-52 | 2026-10-29 | Vehicle access point is a single manually set point per facility (hospital staff of that facility, coordinators, admins), audited. | Pitch "nearest ambulance-accessible point" without claiming survey data. | — |
+
 ## Open questions (non-blocking; defaults above apply)
 
 1. Should a hospital be able to confirm fulfillment with fewer units than requested (partial)? Default: yes, `unitsReceived` recorded.

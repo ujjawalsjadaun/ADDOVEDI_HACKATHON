@@ -2,7 +2,7 @@
 
 Hospital-led, location-aware blood-request coordination for hill districts. Verified requests reach the most reachable compatible donors, ranked by road travel time rather than straight-line distance, with fallbacks for weak connectivity.
 
-> **Status:** Phase 6 — end-to-end flow (raise → verify → alert ranked donors in-app → race-safe accept → en route / arrived → donation → hospital-confirmed fulfilment) plus role dashboards: hospital "needs attention", admin overview / requests / audit log / suspicious reports, coordinator list. Travel times are a labelled simulation; SMS is not connected yet.
+> **Status:** Phase 7 — end-to-end flow (raise → verify → alert ranked donors in-app → race-safe accept → en route / arrived → donation → hospital-confirmed fulfilment), role dashboards, and a map with road-condition reports and vehicle access points. Travel times use live routing (OpenRouteService, optional) or a labelled simulation, with rain delay and reported closures applied. SMS is not connected yet.
 > All donor, patient and facility data in this project is synthetic. This is not an official dispatch service and makes no medical eligibility decisions.
 
 ## Stack
@@ -28,8 +28,9 @@ Auth: HttpOnly session cookie (signed JWT with server-side revocation), bcrypt p
 │  │  ├─ middleware/  request id, JSON-only, authenticate, authorize, rate limit, error handler
 │  │  ├─ modules/     one folder per feature: health, auth, users, hospitals, admin, audit,
 │  │  │               requests, idempotency, public-checker, donors, matching, alerts,
-│  │  │               assignments, dashboard (+ models.ts registry)
-│  │  ├─ providers/   external-service adapters (routing: interface + simulated)
+│  │  │               assignments, dashboard, roads, geo (+ models.ts registry)
+│  │  ├─ providers/   external-service adapters: routing (simulated, OpenRouteService + cache),
+│  │  │               weather (simulated, Open-Meteo)
 │  │  ├─ scripts/     operator commands (create-admin, db:indexes)
 │  │  ├─ types/       Express type augmentation
 │  │  ├─ app.ts       Express app factory
@@ -39,9 +40,9 @@ Auth: HttpOnly session cookie (signed JWT with server-side revocation), bcrypt p
 │  └─ src/
 │     ├─ app/         router, route guard (RequireRole), query client, not-found page
 │     ├─ features/    one folder per area: home, auth, public-checker, hospital, donor, coordinator, admin
-│     │               + requests/ (request detail shared by hospital and admin)
-│     ├─ components/  layout/ (shell, status footer, offline banner) and ui/ (states, forms, badges,
-│     │               stat cards, data-freshness, ETA)
+│     │               + requests/ (request detail) and roads/ (map, road reports) shared across roles
+│     ├─ components/  layout/ (shell, sub-nav, status footer, offline banner), map/ (Leaflet view),
+│     │               ui/ (states, forms, badges, stat cards, data-freshness, ETA)
 │     └─ lib/         api/ (fetch client, query strings), hooks/, format, labels, idempotency
 └─ docs/              architecture, contracts, state machines, security, decisions
 ```
@@ -66,6 +67,11 @@ Edit `server/.env`:
   ```
 
 `server/.env` is git-ignored. Never commit it or paste its values anywhere. Every variable is documented in [docs/architecture.md §9](docs/architecture.md#9-configuration-environment-variables).
+
+Optional live providers (everything works without them, clearly labelled as simulated):
+
+- **Road travel times:** get a free key at openrouteservice.org, then set `ROUTING_PROVIDER=openrouteservice` and `ORS_API_KEY=…`.
+- **Weather:** set `WEATHER_PROVIDER=open-meteo` (no key). For a demo without internet, keep `simulated` and set `SIMULATED_RAIN_MM_PER_HOUR` (0 dry, 5 moderate, 10 heavy).
 
 ### Create the first administrator
 
@@ -127,6 +133,8 @@ The Vite dev server proxies `/api` to the API, so the browser sees one origin an
 | `GET /api/dashboard/hospital` | hospital staff |
 | `GET /api/dashboard/coordinator` | coordinator, admin |
 | `GET /api/admin/overview`, `GET /api/admin/audit`, `/api/admin/suspicious-reports` (list, `/:id/review`) | admin |
+| `GET /api/geo/map`, `/api/road-reports` (list, create, `/:id/verification`) | hospital staff, coordinator, admin (verification: coordinator, admin) |
+| `POST /api/hospitals/:id/access-point` | hospital staff (own facility), coordinator, admin |
 
 Full contracts: [docs/api-contracts.md](docs/api-contracts.md).
 
@@ -143,9 +151,11 @@ Full contracts: [docs/api-contracts.md](docs/api-contracts.md).
 
 ## Known limitations (current phase)
 
-- Alerts are **in-app only** (donors see them when they open the app); SMS arrives in Phase 9. Travel times use a labelled **simulation** (straight line × 1.8 at 25 km/h) until real routing and weather in Phase 7.
+- Alerts are **in-app only** (donors see them when they open the app); SMS arrives in Phase 9.
+- Without an ORS key, travel times are a labelled **simulation** (straight line × 1.8 at 25 km/h). "Near the route" for road reports is a 2 km corridor around the straight line, not the real road.
+- Map tiles come from openstreetmap.org (needs internet; respect the OSM tile usage policy for heavy use).
 - Alerts are not pushed in real time; pages refresh every 15–30 s until Socket.IO (Phase 9). The escalation ladder (automatic widening at 5/10/15 min) arrives in Phase 10 — until then the hospital uses **Alert more donors**.
-- The Coordinator area lists active requests only; road reports, access points and transport tasks arrive in Phases 7–8.
+- Transport tasks, family leads and stock transfers arrive in Phase 8.
 - Requests past their deadline stay open until the expiry worker (Phase 10); the hospital dashboard flags them ("Deadline passed — fulfil or cancel") and verification is refused after the deadline.
 - Rate limits are kept in memory, so they reset when the API restarts and are per-process.
 - Automated tests are out of scope from Phase 3 (decision D-26); each phase is verified manually.

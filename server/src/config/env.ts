@@ -34,6 +34,14 @@ const envSchema = z
     SMS_PROVIDER: z.enum(['simulated']).default('simulated'),
     PROVIDER_TIMEOUT_MS: intIn(500, 30_000).default(4000),
     ROUTE_CACHE_TTL_MIN: intIn(1, 1440).default(30),
+    WEATHER_CACHE_TTL_MIN: intIn(1, 180).default(15),
+    /** Rain delay bands (docs/architecture.md §6): moderate 2.5–7.6 mm/h, heavy > 7.6 mm/h. */
+    RAIN_DELAY_MODERATE_PCT: intIn(0, 200).default(15),
+    RAIN_DELAY_HEAVY_PCT: intIn(0, 300).default(35),
+    /** Rain used by the simulated weather provider (demo scenarios). */
+    SIMULATED_RAIN_MM_PER_HOUR: z.coerce.number().min(0).max(200).default(0),
+    /** A blocked-road report this close to the straight line between donor and hospital makes the ETA unknown. */
+    ROAD_REPORT_CORRIDOR_KM: z.coerce.number().min(0.1).max(20).default(2),
     ESCALATION_STEPS_MIN: minuteList.default([0, 5, 10, 15]),
     ALERT_BATCH_SIZE: intIn(1, 20).default(3),
     ALERT_RESPONSE_WINDOW_MIN: intIn(1, 120).default(5),

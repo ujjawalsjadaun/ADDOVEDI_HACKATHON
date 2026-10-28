@@ -97,6 +97,8 @@ These keep the structure predictable as phases add code:
 | `server/src/scripts/` | Operator CLI commands run with `npm run <script> -w server` (e.g. `create-admin`). |
 | `client/src/features/<area>/` | Pages (`*Page.tsx`), area-only components, and the area's API hooks (`api.ts`). An area never imports another area's internals; move shared pieces to `components/` or `lib/`. |
 | `client/src/features/requests/` | The one cross-role feature: request detail page, its panels and hooks, used by both the hospital and admin areas (`basePath` prop). What each role may do comes from the server's `allowedActions`. |
+| `client/src/features/roads/` | Cross-role feature: map page, road reports and access points, used by hospital, coordinator and admin areas. Lazy-loaded so Leaflet is a separate chunk. |
+| `client/src/components/map/` | Area-agnostic map primitives (`MapView`). |
 | `client/src/lib/labels.ts` | Human labels and badge tones for status values, shared by all areas. |
 | `client/src/components/` | Reusable, area-agnostic UI only. |
 | Naming | React components `PascalCase.tsx`; everything else `camelCase.ts`; folders `kebab-case`. |
@@ -187,7 +189,11 @@ Every provider call has a timeout (default 4 s) and results are cached (`routeCa
 | moderate | 2.5 – 7.6 | +15 % |
 | heavy | > 7.6 | +35 % |
 
-If weather is unavailable, the base ETA is used and the result carries `weatherAdjustment: 'unavailable'`. A blocked road report on the route makes the result `unavailable` with reason `reported_closure` unless a coordinator marks it stale or cleared.
+If weather is unavailable, the base ETA is used and the result carries `weatherAdjustment: 'unavailable'`. Weather is taken at the destination (the facility).
+
+**Road reports (implemented Phase 7, `modules/geo/eta.service.ts`):** a report within `ROAD_REPORT_CORRIDOR_KM` (default 2 km) of the straight line between donor and facility is considered "near the route". A near report makes the ETA `unavailable` (source `road_report`) only if it is **blocked**, current (not stale), not dismissed, and **verified or high-confidence**. Every other near report (unverified low/medium blocked, any restricted) adds a warning but leaves the ETA. Stale reports are ignored. The corridor is a straight-line approximation, not the actual road geometry.
+
+**Live routing (OpenRouteService):** results are cached in `routeCache` (key on a ~110 m grid, TTL `ROUTE_CACHE_TTL_MIN`) with their original `calculatedAt`, so a cached ETA shows its true age (`quality: cached`). If the provider fails, a straight-line `rough_estimate` is returned and labelled as such — never as a road ETA.
 
 ## 7. Realtime (Socket.IO)
 
@@ -227,6 +233,11 @@ Validated with Zod at startup in `server/src/config/env.ts`. Server refuses to s
 | `SMS_PROVIDER` | no | `simulated` | `simulated` only in MVP |
 | `PROVIDER_TIMEOUT_MS` | no | `4000` | Per external call |
 | `ROUTE_CACHE_TTL_MIN` | no | `30` | Route cache lifetime |
+| `WEATHER_CACHE_TTL_MIN` | no | `15` | Weather cache lifetime (per ~10 km cell) |
+| `RAIN_DELAY_MODERATE_PCT` | no | `15` | Added to ETA for 2.5–7.6 mm/h |
+| `RAIN_DELAY_HEAVY_PCT` | no | `35` | Added to ETA for > 7.6 mm/h |
+| `SIMULATED_RAIN_MM_PER_HOUR` | no | `0` | Rain used by the simulated weather provider (demo scenarios) |
+| `ROAD_REPORT_CORRIDOR_KM` | no | `2` | Distance from the straight donor→facility line within which a road report counts as "near the route" |
 | `ESCALATION_STEPS_MIN` | no | `0,5,10,15` | Ladder offsets from verification |
 | `ALERT_BATCH_SIZE` | no | `3` | Donors per alert batch |
 | `ALERT_RESPONSE_WINDOW_MIN` | no | `5` | Alert expires if unanswered |

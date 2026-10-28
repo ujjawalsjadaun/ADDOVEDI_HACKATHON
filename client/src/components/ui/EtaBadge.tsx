@@ -8,10 +8,22 @@ const QUALITY_LABEL: Record<EtaSnapshot['quality'], string> = {
   unavailable: 'travel time unknown',
 };
 
-/** Travel time is always shown with where it came from — never as a bare promise. */
-export function EtaBadge({ eta }: { eta: EtaSnapshot | null }) {
+function weatherText(w: EtaSnapshot['weatherAdjustment']): string {
+  if (w === 'unavailable') return ', weather not included';
+  if (w === 'none') return ', no rain delay';
+  return `, ${w} rain delay added`;
+}
+
+/** Travel time is always shown with where it came from — never as a bare promise. Warnings are listed under it. */
+export function EtaBadge({ eta, showWarnings = true }: { eta: EtaSnapshot | null; showWarnings?: boolean }) {
+  const warnings = showWarnings ? (eta?.warnings ?? []) : [];
   if (!eta || eta.minutes === null) {
-    return <span className="text-sm text-amber-800">Travel time unknown — check manually</span>;
+    return (
+      <span className="text-sm text-amber-800">
+        Travel time unknown — check manually
+        {warnings.length > 0 && <Warnings items={warnings} />}
+      </span>
+    );
   }
   const h = Math.floor(eta.minutes / 60);
   const m = eta.minutes % 60;
@@ -21,8 +33,21 @@ export function EtaBadge({ eta }: { eta: EtaSnapshot | null }) {
       {eta.distanceKm !== null && ` · ${eta.distanceKm} km`}{' '}
       <span className={`text-xs ${eta.quality === 'live' || eta.quality === 'cached' ? 'text-slate-500' : 'text-amber-700'}`}>
         ({QUALITY_LABEL[eta.quality]}
-        {eta.weatherAdjustment === 'unavailable' ? ', weather not included' : eta.weatherAdjustment !== 'none' ? `, ${eta.weatherAdjustment} rain delay added` : ''})
+        {weatherText(eta.weatherAdjustment)})
       </span>
+      {warnings.length > 0 && <Warnings items={warnings} />}
+    </span>
+  );
+}
+
+function Warnings({ items }: { items: string[] }) {
+  return (
+    <span className="mt-0.5 block space-y-0.5">
+      {items.map((w) => (
+        <span key={w} className="block text-xs font-medium text-amber-800">
+          ⚠ {w}
+        </span>
+      ))}
     </span>
   );
 }

@@ -178,8 +178,17 @@ Indexes: `{ resourceType: 1, resourceId: 1, at: 1 }`; `{ facilityId: 1, at: -1 }
 
 ## roadReports
 
-`{ reporterId, location: Point, label, condition: open|blocked|restricted|unknown, note, source: coordinator|admin|hospital, confidence: low|medium|high, verificationStatus: unverified|verified|dismissed, verifiedBy, reportedAt, expiresAt }`
-Indexes: `{ location: '2dsphere' }`, `{ expiresAt: 1 }` (not TTL — stale reports stay for history).
+`{ reporterId, reporterRole, location: Point, label, condition: open|blocked|restricted|unknown, note, confidence: low|medium|high, verificationStatus: unverified|verified|dismissed, verifiedBy, reportedAt, expiresAt }`
+Indexes: `{ location: '2dsphere' }`, `{ expiresAt: 1 }` (not TTL — stale reports stay for history), `{ verificationStatus: 1, expiresAt: 1 }`.
+Derived: `isStale = now ≥ expiresAt`; `affectsEta` = blocked ∧ ¬stale ∧ ¬dismissed ∧ (verified ∨ confidence high) — see architecture.md §6.
+
+## hospitals.ambulanceAccessPoint
+
+`{ location: Point, note, reportedBy, reportedAt } | null` — nearest point a vehicle can reach; a reported estimate.
+
+## ETA snapshot (embedded in requestAlerts and assignments)
+
+`{ minutes|null, distanceKm|null, quality: live|cached|simulated|rough_estimate|unavailable, source, calculatedAt, weatherAdjustment: none|moderate|heavy|unavailable, warnings: string[] }`
 
 ## routeCache
 

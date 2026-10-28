@@ -12,6 +12,7 @@ export const etaSnapshotSchema = new Schema(
     source: { type: String, required: true },
     calculatedAt: { type: Date, required: true },
     weatherAdjustment: { type: String, enum: ['none', 'moderate', 'heavy', 'unavailable'], default: 'unavailable' },
+    warnings: { type: [String], default: [] },
   },
   { _id: false },
 );

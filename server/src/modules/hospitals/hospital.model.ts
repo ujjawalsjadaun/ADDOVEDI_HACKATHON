@@ -11,6 +11,19 @@ const hospitalSchema = new Schema(
     location: { type: geoPointSchema, required: true },
     /** Staff/admin only; never in public DTOs. */
     registeredPhone: { type: String, required: true },
+    /** Nearest point a vehicle/ambulance can reach — a reported estimate, not a survey. */
+    ambulanceAccessPoint: {
+      type: new Schema(
+        {
+          location: { type: geoPointSchema, required: true },
+          note: { type: String, default: null },
+          reportedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+          reportedAt: { type: Date, required: true },
+        },
+        { _id: false },
+      ),
+      default: null,
+    },
     verificationStatus: { type: String, enum: HOSPITAL_VERIFICATION_STATUSES, default: 'pending' },
     verification: {
       type: new Schema(

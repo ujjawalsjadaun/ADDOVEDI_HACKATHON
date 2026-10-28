@@ -3,7 +3,7 @@ import { objectIdSchema, paginationQuerySchema, reasonSchema } from './common';
 
 export const auditQuerySchema = paginationQuerySchema.extend({
   action: z.string().trim().max(60).optional(),
-  resourceType: z.enum(['user', 'hospital', 'bloodRequest']).optional(),
+  resourceType: z.enum(['user', 'hospital', 'bloodRequest', 'roadReport']).optional(),
   resourceId: objectIdSchema.optional(),
   facilityId: objectIdSchema.optional(),
   result: z.enum(['success', 'denied', 'failed']).optional(),

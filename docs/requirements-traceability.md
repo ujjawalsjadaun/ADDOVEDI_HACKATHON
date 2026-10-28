@@ -20,21 +20,21 @@ Repository is greenfield as of Phase 0, so every item starts as *missing*.
 | M10 | Duplicate protection: idempotency, one active request per patient, similarity flag, human review | P | Must | 4 | implemented (Phase 4) |
 | M11 | Audit events for critical/admin actions | P | Must | 4–10 | partial — auth, facility and account decisions audited |
 | M12 | Dashboards for hospital, donor, admin/coordinator | R | Must | 6 | implemented (Phase 6) — hospital dashboard, donor home, admin overview/requests/audit/reports, coordinator list; freshness indicators |
-| M13 | Manual fallback when route/weather/SMS provider is down | P | Must | 7, 9 | missing |
+| M13 | Manual fallback when route/weather/SMS provider is down | P | Must | 7, 9 | partial — routing/weather fall back to labelled unknown/rough; SMS fallback in Phase 9 |
 | M14 | Synthetic seed data and automated happy-path/failure tests | R | Must | 2–11 | descoped by user (D-26): no tests or demo scripts |
-| M15 | "Demo/simulated" labels on simulated provider results | R | Must | 7, 9, 12 | missing |
+| M15 | "Demo/simulated" labels on simulated provider results | R | Must | 7, 9, 12 | partial — ETA quality, weather and provider labels everywhere; SMS in Phase 9 |
 
 ## Should Have
 
 | ID | Requirement | Src | Phase | Status |
 | --- | --- | --- | --- | --- |
-| S1 | Leaflet map (hospitals, coarse donor markers, ambulance-accessible point) | P | 7 | missing |
-| S2 | Road ETA with timeout, cache, freshness label; labelled straight-line fallback | P | 7 | missing |
-| S3 | Rain/weather delay as configurable band | P | 7 | missing |
+| S1 | Leaflet map (hospitals, coarse donor markers, ambulance-accessible point) | P | 7 | implemented (Phase 7) — facilities, access points, road reports; donors never mapped |
+| S2 | Road ETA with timeout, cache, freshness label; labelled straight-line fallback | P | 7 | implemented (Phase 7) — ORS optional, cache with age, labelled fallback |
+| S3 | Rain/weather delay as configurable band | P | 7 | implemented (Phase 7) — Open-Meteo or simulated, 3 bands |
 | S4 | Configurable escalation ladder (0 / 5 / 10 / 15 min) | P | 10 | missing |
 | S5 | SMS adapter with test mode and delivery-state tracking | P | 9 | missing |
 | S6 | Hospital ↔ hospital / blood-bank stock request and transfer timeline | P | 8 | missing |
-| S7 | Road closure reports with author, time, confidence, expiry, verification | P | 7 | missing |
+| S7 | Road closure reports with author, time, confidence, expiry, verification | P | 7 | implemented (Phase 7) |
 | S8 | Family lead stays pending until hospital confirms | P | 8 | missing |
 | S9 | No-show/decline → next-best donor; strike/review | P | 5, 10 | implemented (Phase 5) — next batch after decline/withdraw/no-show; 3 strikes → admin review |
 | S10 | Demo scenario reset (dev/demo only) | R | 12 | descoped by user (no demo scripts) |

@@ -170,12 +170,16 @@ Never included: patient label/notes, units filled, donor info, phone numbers, in
 | `POST /family-leads/:id/confirm` | HS own facility | `{ request: CreateRequest }` → creates request (still needs verification) and links lead |
 | `POST /family-leads/:id/reject` | HS own facility | `{ reason }` |
 
-### Geo / road
-| `GET /geo/eta?requestId=&donorUserId=` | HS own facility | `EtaResult` snapshot (no coordinates) |
-| `GET /road-reports?bbox=` | HS, CO, ADM | with `isStale` |
-| `POST /road-reports` | CO, ADM, HS | `{ location, label, condition, note?, confidence, expiresInHours }` |
-| `POST /road-reports/:id/verification` | CO, ADM | `{ decision: verified|dismissed, reason }` |
-| `POST /hospitals/:id/access-point` | HS own facility, CO | `{ location, note }` |
+### Geo / road (Phase 7)
+| Method & path | Role | Notes |
+| --- | --- | --- |
+| `GET /geo/map` | HS, CO, ADM | `MapData`: verified facilities (location, vehicle access point, active request count), road reports, provider labels (`simulated` or live), closure corridor. **Never** donor locations |
+| `GET /road-reports` | HS, CO, ADM | current reports + those expired within 24 h (`isStale: true`); dismissed hidden. Each has `affectsEta` and `allowedActions` |
+| `POST /road-reports` | HS, CO, ADM (30/h/user) | `{ location, label, condition: open|blocked|restricted|unknown, note?, confidence: low|medium|high, expiresInHours: 1–72 }` → `201 RoadReportView` |
+| `POST /road-reports/:id/verification` | CO, ADM | `{ decision: verified|dismissed, reason }`; a coordinator cannot verify their own report |
+| `POST /hospitals/:id/access-point` | HS own facility, CO, ADM | `{ location: {lat,lng} | null, note? }` — `null` clears it |
+
+Every ETA (`EtaSnapshot`) now carries `warnings: string[]` (e.g. unconfirmed closure near the route, weather unavailable, rough straight-line guess) and a real `weatherAdjustment` band.
 
 ### Transport
 | `POST /transport-tasks` | HS own facility, CO | `{ requestId, kind, pickup, dropoff, assigneeUserId? }` |

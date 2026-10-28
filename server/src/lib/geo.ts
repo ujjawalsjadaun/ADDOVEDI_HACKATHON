@@ -37,3 +37,21 @@ export function haversineKm(a: LatLng, b: LatLng): number {
 export function coarsen({ lat, lng }: LatLng): LatLng {
   return { lat: Math.round(lat * 100) / 100, lng: Math.round(lng * 100) / 100 };
 }
+
+/**
+ * Shortest distance in km from point `p` to the straight segment a→b (local equirectangular
+ * projection; accurate enough for district-scale corridors).
+ */
+export function distanceToSegmentKm(p: LatLng, a: LatLng, b: LatLng): number {
+  const kmPerDegLat = 111.32;
+  const kmPerDegLng = 111.32 * Math.cos((((a.lat + b.lat) / 2) * Math.PI) / 180);
+  const toXY = (q: LatLng) => ({ x: q.lng * kmPerDegLng, y: q.lat * kmPerDegLat });
+  const P = toXY(p);
+  const A = toXY(a);
+  const B = toXY(b);
+  const dx = B.x - A.x;
+  const dy = B.y - A.y;
+  const len2 = dx * dx + dy * dy;
+  const t = len2 === 0 ? 0 : Math.max(0, Math.min(1, ((P.x - A.x) * dx + (P.y - A.y) * dy) / len2));
+  return Math.hypot(P.x - (A.x + t * dx), P.y - (A.y + t * dy));
+}

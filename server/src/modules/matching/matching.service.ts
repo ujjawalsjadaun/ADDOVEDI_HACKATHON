@@ -2,11 +2,11 @@ import { eligibleDonorGroups, type Candidate, type CandidatePreview, type EtaSna
 import type { Types } from 'mongoose';
 import type { Config } from '../../config/env';
 import { fromGeoPoint, haversineKm } from '../../lib/geo';
-import { getRoutingProvider, type EtaResult } from '../../providers/routing/routing.provider';
 import { RequestAlertModel } from '../alerts/alert.model';
 import { AssignmentModel } from '../assignments/assignment.model';
 import { AVAILABILITY_STALE_DAYS } from '../donors/donor.dto';
 import { DonorProfileModel, type DonorProfileDocument } from '../donors/donor.model';
+import { createEtaContext } from '../geo/eta.service';
 import type { HospitalDocument } from '../hospitals/hospital.model';
 import type { BloodRequestDocument } from '../requests/request.model';
 import { UserModel } from '../users/user.model';
@@ -28,21 +28,6 @@ export interface MatchResult {
   manualReview: RankedCandidate[];
   alreadyAlerted: number;
   cooldownRelaxed: boolean;
-}
-
-export function toEtaSnapshot(result: EtaResult): EtaSnapshot {
-  if (result.status === 'unavailable') {
-    return { minutes: null, distanceKm: null, quality: 'unavailable', source: 'none', calculatedAt: result.calculatedAt.toISOString(), weatherAdjustment: 'unavailable' };
-  }
-  return {
-    minutes: result.minutes,
-    distanceKm: result.distanceKm,
-    quality: result.quality,
-    source: result.source,
-    calculatedAt: result.calculatedAt.toISOString(),
-    // Weather adjustment arrives with the weather adapter (Phase 7).
-    weatherAdjustment: 'unavailable',
-  };
 }
 
 const QUALITY_ORDER: Record<string, number> = { live: 0, cached: 1, simulated: 2, rough_estimate: 3, unavailable: 4 };
@@ -106,14 +91,9 @@ export async function matchDonors(
     .sort((a, b) => a.km - b.km)
     .slice(0, ETA_POOL);
 
-  const routing = getRoutingProvider(config);
-  const etas = await Promise.all(
-    byDistance.map(({ p }) =>
-      routing
-        .getEta(fromGeoPoint(p.anchorLocation!), hospitalAt, { timeoutMs: config.PROVIDER_TIMEOUT_MS })
-        .catch((err: unknown): EtaResult => ({ status: 'unavailable', reason: String(err), calculatedAt: new Date() })),
-    ),
-  );
+  // Routing + road reports + weather, each labelled (modules/geo/eta.service.ts).
+  const etaContext = await createEtaContext(config);
+  const etas = await Promise.all(byDistance.map(({ p }) => etaContext.eta(fromGeoPoint(p.anchorLocation!), hospitalAt)));
 
   const toCandidate = (p: DonorProfileDocument, eta: EtaSnapshot): RankedCandidate => ({
     profileId: p._id,
@@ -128,7 +108,7 @@ export async function matchDonors(
     rank: 0,
   });
 
-  const all = byDistance.map(({ p }, i) => toCandidate(p, toEtaSnapshot(etas[i]!)));
+  const all = byDistance.map(({ p }, i) => toCandidate(p, etas[i]!));
   const withRank = (list: RankedCandidate[]) => list.sort(compareCandidates).map((c, i) => ({ ...c, rank: i + 1 }));
   const known = new Set(eligible.filter((p) => p.lastDonationKnown).map((p) => p.userId.toString()));
 

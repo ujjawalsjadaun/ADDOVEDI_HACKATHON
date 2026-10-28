@@ -114,7 +114,7 @@ export function useAdminRequests(filter: { active?: 'true' | 'false'; requestSta
 
 export interface AuditFilter {
   action?: string;
-  resourceType?: 'user' | 'hospital' | 'bloodRequest';
+  resourceType?: 'user' | 'hospital' | 'bloodRequest' | 'roadReport';
   result?: 'success' | 'denied' | 'failed';
   page?: number;
   limit?: number;

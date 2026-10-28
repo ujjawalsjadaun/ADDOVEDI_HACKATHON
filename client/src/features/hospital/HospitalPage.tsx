@@ -1,6 +1,13 @@
 import { Outlet } from 'react-router';
+import { SubNav } from '../../components/layout/SubNav';
 import { StatusBadge } from '../../components/ui/StatusBadge';
 import { useMe } from '../auth/api';
+
+const TABS = [
+  { to: '/hospital', label: 'Dashboard', end: true },
+  { to: '/hospital/requests', label: 'Requests' },
+  { to: '/hospital/map', label: 'Map & roads' },
+];
 
 const FACILITY_NOTICE: Record<string, string> = {
   pending: 'Your facility is waiting for an administrator to verify it. Requests cannot be raised until then.',
@@ -35,6 +42,7 @@ export function HospitalPage() {
           )}
         </section>
       )}
+      <SubNav label="Hospital sections" items={TABS} />
       <Outlet />
     </div>
   );

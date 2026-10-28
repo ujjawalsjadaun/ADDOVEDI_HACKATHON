@@ -19,6 +19,8 @@ import { donorRoutes } from './modules/donors/donor.routes';
 import { alertRoutes } from './modules/alerts/alert.routes';
 import { assignmentRoutes } from './modules/assignments/assignment.routes';
 import { dashboardRoutes } from './modules/dashboard/dashboard.routes';
+import { roadReportRoutes } from './modules/roads/roadReport.routes';
+import { geoRoutes } from './modules/geo/geo.routes';
 
 export interface AppDeps {
   config: Config;
@@ -70,6 +72,8 @@ export function createApp({ config, logger }: AppDeps) {
   api.use('/alerts', alertRoutes());
   api.use('/assignments', assignmentRoutes(config, logger));
   api.use('/dashboard', dashboardRoutes());
+  api.use('/road-reports', roadReportRoutes());
+  api.use('/geo', geoRoutes(config));
   api.use(notFound);
 
   app.use('/api', api);

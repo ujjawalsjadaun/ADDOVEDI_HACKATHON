@@ -15,6 +15,7 @@ import { DonorPage } from '../features/donor/DonorPage';
 import { DonorHomePage } from '../features/donor/DonorHomePage';
 import { DonorProfilePage } from '../features/donor/DonorProfilePage';
 import { CoordinatorPage } from '../features/coordinator/CoordinatorPage';
+import { CoordinatorRequestsPage } from '../features/coordinator/CoordinatorRequestsPage';
 import { AdminPage } from '../features/admin/AdminPage';
 import { OverviewPanel } from '../features/admin/OverviewPanel';
 import { RequestsPanel } from '../features/admin/RequestsPanel';
@@ -23,6 +24,9 @@ import { UsersPanel } from '../features/admin/UsersPanel';
 import { DonorsPanel } from '../features/admin/DonorsPanel';
 import { ReportsPanel } from '../features/admin/ReportsPanel';
 import { AuditPanel } from '../features/admin/AuditPanel';
+
+/** Leaflet is only needed on map pages — load it in its own chunk. */
+const loadRoadMap = async () => ({ Component: (await import('../features/roads/RoadMapPage')).RoadMapPage });
 
 export const routes: RouteObject[] = [
   {
@@ -45,6 +49,7 @@ export const routes: RouteObject[] = [
           { path: 'requests', element: <RequestsListPage /> },
           { path: 'requests/new', element: <NewRequestPage /> },
           { path: 'requests/:id', element: <RequestDetailPage basePath="/hospital/requests" /> },
+          { path: 'map', lazy: loadRoadMap },
           { path: '*', element: <NotFoundPage /> },
         ],
       },
@@ -62,12 +67,17 @@ export const routes: RouteObject[] = [
         ],
       },
       {
-        path: 'coordinator/*',
+        path: 'coordinator',
         element: (
           <RequireRole roles={['coordinator']}>
             <CoordinatorPage />
           </RequireRole>
         ),
+        children: [
+          { index: true, element: <CoordinatorRequestsPage /> },
+          { path: 'map', lazy: loadRoadMap },
+          { path: '*', element: <NotFoundPage /> },
+        ],
       },
       {
         path: 'admin',
@@ -81,6 +91,7 @@ export const routes: RouteObject[] = [
           { path: 'overview', element: <OverviewPanel /> },
           { path: 'requests', element: <RequestsPanel /> },
           { path: 'requests/:id', element: <RequestDetailPage basePath="/admin/requests" /> },
+          { path: 'map', lazy: loadRoadMap },
           { path: 'hospitals', element: <HospitalsPanel /> },
           { path: 'users', element: <UsersPanel /> },
           { path: 'donors', element: <DonorsPanel /> },

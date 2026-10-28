@@ -17,6 +17,7 @@ export function toEtaView(eta: RequestAlertDocument['eta']): EtaSnapshot | null 
     source: eta.source,
     calculatedAt: eta.calculatedAt.toISOString(),
     weatherAdjustment: eta.weatherAdjustment ?? 'unavailable',
+    warnings: eta.warnings ?? [],
   };
 }
 

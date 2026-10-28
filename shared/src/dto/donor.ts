@@ -11,6 +11,8 @@ export interface EtaSnapshot {
   source: string;
   calculatedAt: string;
   weatherAdjustment: WeatherAdjustment;
+  /** Plain-language caveats, e.g. a reported closure near the route. */
+  warnings: string[];
 }
 
 export interface DonorProfileView {

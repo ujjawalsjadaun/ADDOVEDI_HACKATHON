@@ -1,5 +1,6 @@
 import type { z } from 'zod';
 import type {
+  AccessPointInput,
   CreateHospitalInput,
   HospitalAdmin,
   HospitalDecisionInput,
@@ -12,6 +13,7 @@ import { AppError } from '../../lib/errors';
 import { toGeoPoint } from '../../lib/geo';
 import { withTransaction } from '../../lib/transaction';
 import { recordAudit, userActor } from '../audit/audit.service';
+import { assertFacilityScope } from '../auth/auth.policy';
 import type { ActionContext } from '../auth/auth.types';
 import { UserModel } from '../users/user.model';
 import { toHospitalAdmin, toHospitalPublic } from './hospital.dto';
@@ -127,4 +129,36 @@ export async function decideHospitalVerification(
   });
   const counts = await staffCounts([updated._id]);
   return toHospitalAdmin(updated, counts.get(id) ?? 0);
+}
+
+/** Sets or clears the facility's ambulance-accessible point. Hospital staff (own facility), coordinators, admins. */
+export async function setAccessPoint(id: string, input: AccessPointInput, ctx: ActionContext): Promise<void> {
+  if (ctx.user.role === 'hospital_staff') assertFacilityScope(ctx.user, id);
+  await withTransaction(async (session) => {
+    const before = await HospitalModel.findById(id).session(session);
+    if (!before) throw new AppError('NOT_FOUND', 'Not found.');
+    await HospitalModel.updateOne(
+      { _id: id },
+      {
+        $set: {
+          ambulanceAccessPoint: input.location
+            ? { location: toGeoPoint(input.location), note: input.note || null, reportedBy: new Types.ObjectId(ctx.user.id), reportedAt: new Date() }
+            : null,
+        },
+      },
+      { session },
+    );
+    await recordAudit(
+      {
+        actor: userActor(ctx.user),
+        action: input.location ? 'hospital.access_point_set' : 'hospital.access_point_cleared',
+        resourceType: 'hospital',
+        resourceId: before._id,
+        facilityId: before._id,
+        detail: input.note ? { note: input.note } : undefined,
+        requestId: ctx.requestId,
+      },
+      session,
+    );
+  });
 }

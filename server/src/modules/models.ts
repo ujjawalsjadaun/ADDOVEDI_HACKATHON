@@ -9,3 +9,5 @@ import './public-checker/suspiciousReport.model';
 import './donors/donor.model';
 import './alerts/alert.model';
 import './assignments/assignment.model';
+import './roads/roadReport.model';
+import '../providers/routing/routeCache.model';
