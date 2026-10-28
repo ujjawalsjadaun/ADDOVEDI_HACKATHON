@@ -107,7 +107,15 @@ Role key: **PUB** public · **ADM** admin · **HS** hospital staff · **HV** hos
 | `POST /requests/:id/fulfill` | HS own facility | `{ expectedVersion, unitsReceived, note? }` → `closed/fulfilled` |
 | `POST /requests/:id/cancel` | HS own facility, ADM | `{ expectedVersion, reason }` |
 
-`RequestDetail = { id, publicCode, facility: FacilitySummary, bloodGroup, acceptCompatibleGroups, unitsRequested, slotsFilled, urgencySuggested, urgencyConfirmed, deadlineAt, patientLabel, clinicalNote, verificationStatus, requestStatus, duplicateReview, closure, escalationStep, version, createdAt, timeline: TimelineEvent[], assignments: AssignmentForHospital[] }` — never contains `patientRefHash`.
+`RequestDetail = { id, publicCode, facility: FacilitySummary, bloodGroup, acceptCompatibleGroups, unitsRequested, slotsFilled, urgency, urgencySuggested, urgencyConfirmed, deadlineAt, patientLabel, clinicalNote, verificationStatus, requestStatus, duplicateReview { status, candidates[], decidedBy, decidedAt, reason }, duplicateOfRequestId, closure, verification, verifiedAt, createdBy, version, createdAt, timeline: TimelineEvent[], allowedActions: RequestAction[] }` — never contains `patientRefHash`. Exact types: `shared/src/dto/request.ts`. Assignments are added in Phase 5.
+
+Implementation notes (Phase 4):
+- `allowedActions` (`verify | reject | review_duplicate | cancel | fulfill`) is computed by the same rule function that guards each mutation (`requests/request.transitions.ts`), so the UI only offers what the server will accept.
+- `POST /requests` requires `Idempotency-Key` (16–64 chars of `A-Za-z0-9_-`). A replay with the same key and body returns the original status (`201`) with the request's **current** state and header `Idempotent-Replayed: true`; the same key with a different body → `422 IDEMPOTENCY_KEY_REUSED`; a still-running original → `409 CONFLICT`. If creation fails, the key is released so the corrected request can be resent.
+- `deadlineAt` must be between 5 minutes and 72 hours ahead.
+- `ACTIVE_REQUEST_EXISTS` returns `fields.existingRequestId` and `fields.existingPublicCode` (same facility only).
+- Verify re-runs the duplicate check; if a new similar request appeared, the request is flagged and the call returns `409 DUPLICATE_REVIEW_PENDING`.
+- Until Phase 5, verification moves the request to `awaiting_donor` without creating alerts.
 
 ### Donors
 | Method & path | Role | Notes |

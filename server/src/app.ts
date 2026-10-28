@@ -13,6 +13,8 @@ import { healthRoutes } from './modules/health/health.routes';
 import { authRoutes } from './modules/auth/auth.routes';
 import { publicHospitalRoutes } from './modules/hospitals/hospital.routes';
 import { adminRoutes } from './modules/admin/admin.routes';
+import { requestRoutes } from './modules/requests/request.routes';
+import { publicCheckerRoutes } from './modules/public-checker/checker.routes';
 
 export interface AppDeps {
   config: Config;
@@ -43,7 +45,8 @@ export function createApp({ config, logger }: AppDeps) {
     cors({
       origin: config.CLIENT_ORIGIN,
       credentials: true,
-      exposedHeaders: ['X-Request-Id', 'Retry-After'],
+      exposedHeaders: ['X-Request-Id', 'Retry-After', 'Idempotent-Replayed'],
+      allowedHeaders: ['Content-Type', 'Idempotency-Key', 'X-Request-Id'],
     }),
   );
 
@@ -57,6 +60,8 @@ export function createApp({ config, logger }: AppDeps) {
   api.use('/auth', authRoutes(config, logger));
   api.use('/hospitals', publicHospitalRoutes());
   api.use('/admin', adminRoutes());
+  api.use('/requests', requestRoutes(config));
+  api.use('/public', publicCheckerRoutes(config));
   api.use(notFound);
 
   app.use('/api', api);

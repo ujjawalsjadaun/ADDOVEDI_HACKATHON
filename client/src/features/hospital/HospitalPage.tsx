@@ -1,4 +1,4 @@
-import { ComingSoon } from '../../components/ui/ComingSoon';
+import { Outlet } from 'react-router';
 import { StatusBadge } from '../../components/ui/StatusBadge';
 import { useMe } from '../auth/api';
 
@@ -8,31 +8,34 @@ const FACILITY_NOTICE: Record<string, string> = {
   rejected: 'Your facility registration was rejected. Contact the Golden Hour administrator.',
 };
 
+/** Hospital area shell: facility status, then the current page. */
 export function HospitalPage() {
   const me = useMe();
   const facility = me.data?.facility;
   const user = me.data?.user;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {facility && (
-        <section className="card">
-          <div className="flex flex-wrap items-center gap-2">
-            <h2 className="font-semibold">{facility.name}</h2>
-            <StatusBadge status={facility.verificationStatus} />
+        <section className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-4">
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-xl font-semibold tracking-tight">{facility.name}</h1>
+              <StatusBadge status={facility.verificationStatus} />
+            </div>
+            <p className="text-sm text-slate-600">
+              {facility.district} · {user?.name}
+              {user?.canVerifyRequests ? ' · request verifier' : ''}
+            </p>
           </div>
-          <p className="text-sm text-slate-600">
-            {facility.district} · signed in as {user?.name}
-            {user?.canVerifyRequests ? ' (request verifier)' : ''}
-          </p>
           {FACILITY_NOTICE[facility.verificationStatus] && (
-            <p role="status" className="mt-3 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-900">
+            <p role="status" className="w-full rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-900">
               {FACILITY_NOTICE[facility.verificationStatus]}
             </p>
           )}
         </section>
       )}
-      <ComingSoon title="Blood requests" phase={4} description="Create and verify blood requests and confirm fulfilment." />
+      <Outlet />
     </div>
   );
 }

@@ -33,6 +33,14 @@ Each entry: decision, why, and whether it needs review by a domain partner befor
 | D-25 | 2026-10-29 | An admin cannot change their own account status. | Prevents locking out the last administrator by accident. | — |
 | D-26 | 2026-10-29 | No automated tests are written or run from Phase 3 onward (user instruction); each phase is verified with typecheck, lint, build and manual API checks recorded in the phase summary. Existing Phase 2 test files are left untouched. | User's scope decision for the hackathon. | — |
 
+| D-27 | 2026-10-29 | Phase 4 verification moves a request to `awaiting_donor` without alerts; Phase 5 adds the first alert batch inside the same verify transaction. Cancel/fulfil have marked hooks for cancelling alerts and assignments. | Keeps the state machine final now while matching arrives next phase. | — |
+| D-28 | 2026-10-29 | Idempotency keys are claimed before the handler runs and released if it fails; replays return the resource's current state rather than a frozen response body. | Avoids storing staff-only payloads in a second collection and lets a corrected submission reuse the form's key. | — |
+| D-29 | 2026-10-29 | A request deadline must be 5 min – 72 h ahead. | Emergency scope; guards against typos (e.g. wrong year). | Partner review |
+| D-30 | 2026-10-29 | Possible-duplicate flag blocks verification until a verifier decides *separate need* or *duplicate* (with a reason). Similarity = same facility + blood group, active, raised ≤ 6 h ago, deadline within ±6 h, different patient hash. | Pitch: human review, never auto-reject. | Partner review |
+| D-31 | 2026-10-29 | Patient reference is normalised (trim, upper-case, collapsed spaces) and HMAC'd with the facility id, so the same MRN at two facilities never collides and the raw value is unrecoverable. | Privacy + correct per-facility uniqueness. | — |
+| D-32 | 2026-10-29 | Until the expiry worker (Phase 10), a request past its deadline stays open; the UI shows "x ago" and verification is refused after the deadline. Public `under_review` is not yet emitted (admin flagging is Phase 10). | Honest interim behaviour. | — |
+| D-33 | 2026-10-29 | Public checker treats malformed and unknown codes identically (`200 { status: 'not_found' }`), accepts Crockford-ambiguous input (O→0, I/L→1, optional `GH`/dashes), and suspicious reports are accepted whether or not the code exists. | No enumeration signal; forgiving for people re-typing SMS codes. | — |
+
 ## Open questions (non-blocking; defaults above apply)
 
 1. Should a hospital be able to confirm fulfillment with fewer units than requested (partial)? Default: yes, `unitsReceived` recorded.

@@ -10,14 +10,14 @@ Repository is greenfield as of Phase 0, so every item starts as *missing*.
 | --- | --- | --- | --- | --- | --- |
 | M1 | Hospital/staff login with backend role authorization | P | Must | 3 | implemented (Phase 3) |
 | M2 | Admin-controlled hospital/facility verification | P | Must | 3–4 | implemented (Phase 3) |
-| M3 | Hospital-created blood request (group, units, facility, urgency, deadline, safe patient ref, idempotency key) | P | Must | 4 | missing |
-| M4 | Request verification separate from creation | P | Must | 4 | missing |
-| M5 | Public "Is this real?" checker with minimal disclosure | P | Must | 4 | missing |
+| M3 | Hospital-created blood request (group, units, facility, urgency, deadline, safe patient ref, idempotency key) | P | Must | 4 | implemented (Phase 4) |
+| M4 | Request verification separate from creation | P | Must | 4 | implemented (Phase 4) — separate verifier by default |
+| M5 | Public "Is this real?" checker with minimal disclosure | P | Must | 4 | implemented (Phase 4) |
 | M6 | Donor profile: consent, blood group, coarse location, availability, last donation date, cooldown | P | Must | 5 | missing |
 | M7 | Matching: compatibility, 90-day rest period, availability, skip recently contacted, ETA ranking | P | Must | 5 | missing |
 | M8 | Donor accept/decline with atomic single-claim assignment | R | Must | 5 | missing |
-| M9 | Request timeline (requested → verified → alerted → accepted → en route → arrived → fulfilled → closed) and hospital-confirmed fulfillment | P | Must | 4–6 | missing |
-| M10 | Duplicate protection: idempotency, one active request per patient, similarity flag, human review | P | Must | 4 | missing |
+| M9 | Request timeline (requested → verified → alerted → accepted → en route → arrived → fulfilled → closed) and hospital-confirmed fulfillment | P | Must | 4–6 | partial — request timeline + hospital-confirmed fulfilment; donor steps in Phase 5 |
+| M10 | Duplicate protection: idempotency, one active request per patient, similarity flag, human review | P | Must | 4 | implemented (Phase 4) |
 | M11 | Audit events for critical/admin actions | P | Must | 4–10 | partial — auth, facility and account decisions audited |
 | M12 | Dashboards for hospital, donor, admin/coordinator | R | Must | 6 | partial — admin facilities + staff screens |
 | M13 | Manual fallback when route/weather/SMS provider is down | P | Must | 7, 9 | missing |
@@ -45,9 +45,9 @@ Repository is greenfield as of Phase 0, so every item starts as *missing*.
 | ID | Requirement | Phase | Status |
 | --- | --- | --- | --- |
 | A1 | Rate limits on login, public checker, leads, webhooks | 3, 10 | partial — login (10 / 15 min per IP+email) |
-| A2 | Cooldowns and one active request per patient | 4–5 | missing |
+| A2 | Cooldowns and one active request per patient | 4–5 | partial — one active request per patient (unique index); donor cooldowns in Phase 5 |
 | A3 | Strikes, account pause/review | 10 | partial — admin pause/suspend with session revocation |
-| A4 | Suspicious-request reports | 4, 10 | missing |
+| A4 | Suspicious-request reports | 4, 10 | partial — public report intake; admin review queue in Phase 10 |
 | A5 | Audit trail | 4–10 | partial |
 
 ## Could Have / future (pitch marks several as planned)
