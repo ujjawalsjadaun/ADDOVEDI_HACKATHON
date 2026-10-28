@@ -66,6 +66,6 @@ Commit messages follow Conventional Commits (`feat:`, `fix:`, `docs:`, `test:`, 
 
 ## 6. Decisions (confirmed by user, 2026-10-29)
 
-1. **GitHub remote:** user will create an empty repository and supply the URL; until then commits stay local.
+1. **GitHub remote:** `origin` = https://github.com/ujjawalsjadaun/ADDOVEDI_HACKATHON (local history was rebased onto GitHub's auto-generated "Initial commit"; no force-push). From Phase 1 the user runs commits and pushes.
 2. **Database:** MongoDB Atlas free tier for development and demo (replica set, so transactions are available). Connection string lives only in the git-ignored `server/.env`. Automated tests use `mongodb-memory-server` in replica-set mode.
 3. **Branching:** commit directly to `main`, one or more commits per phase, each at a passing gate.
