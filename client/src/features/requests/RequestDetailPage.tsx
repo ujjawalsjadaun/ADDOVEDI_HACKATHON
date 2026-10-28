@@ -25,10 +25,13 @@ export function RequestDetailPage({ basePath = '/hospital/requests' }: { basePat
   const active = r.requestStatus !== 'closed';
 
   return (
-    <article className="space-y-4">
+    <article className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <Link to={basePath} className="text-sm text-slate-600 hover:underline">
-          ← Back to requests
+        <Link to={basePath} className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-900 transition-colors">
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+          Back to requests
         </Link>
         <DataFreshness
           updatedAt={query.dataUpdatedAt}
@@ -40,56 +43,108 @@ export function RequestDetailPage({ basePath = '/hospital/requests' }: { basePat
       </div>
 
       {flash?.created && (
-        <p role="status" className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
-          Request submitted. It is pending until a verifier at your facility confirms it.
-          {flash.possibleDuplicate && ' It was flagged as a possible duplicate and needs review first.'}
-        </p>
+        <div role="status" className="flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50/80 p-4 text-sm text-emerald-900 shadow-xs">
+          <svg className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <div>
+            <p className="font-semibold text-emerald-950">Request submitted successfully</p>
+            <p className="text-xs text-emerald-800 mt-0.5">
+              It is pending until a verifier at your facility confirms it.
+              {flash.possibleDuplicate && ' It was flagged as a possible duplicate and needs review first.'}
+            </p>
+          </div>
+        </div>
       )}
 
-      <header className="card">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="rounded bg-brand-50 px-2.5 py-1 text-lg font-bold text-brand-700">{r.bloodGroup}</span>
-          <h2 className="font-mono text-lg font-semibold">{r.publicCode}</h2>
-          <StatusBadge status={state.label} label={state.label} tone={state.tone} />
-          {active && (
-            <StatusBadge
-              status={r.urgency}
-              label={`${URGENCY_LABEL[r.urgency]}${r.urgencyConfirmed ? '' : ' (suggested)'}`}
-              tone={URGENCY_TONE[r.urgency]}
-            />
-          )}
+      <header className="card space-y-4 border-slate-200">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <span className="inline-flex items-center justify-center rounded-xl bg-brand-50 px-3 py-1 font-mono text-xl font-extrabold text-brand-700 border border-brand-200 shadow-2xs">
+              {r.bloodGroup}
+            </span>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="font-mono text-lg font-bold text-slate-900 tracking-tight">{r.publicCode}</h2>
+                <span className="rounded bg-slate-100 px-2 py-0.5 font-mono text-2xs font-semibold text-slate-600">ID: {r.id.slice(0, 8)}</span>
+              </div>
+              <p className="text-2xs text-slate-500 font-medium">Public Clinical Emergency Request</p>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <StatusBadge status={state.label} label={state.label} tone={state.tone} />
+            {active && (
+              <StatusBadge
+                status={r.urgency}
+                label={`${URGENCY_LABEL[r.urgency]}${r.urgencyConfirmed ? '' : ' (suggested)'}`}
+                tone={URGENCY_TONE[r.urgency]}
+              />
+            )}
+          </div>
         </div>
-        <dl className="mt-4 grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
-          <Item label="Units">
-            {r.slotsFilled} of {r.unitsRequested} assigned
-          </Item>
-          <Item label="Needed by">
-            {formatDateTime(r.deadlineAt)}
-            {active && ` (${relativeTime(r.deadlineAt)})`}
-          </Item>
-          <Item label="Donor groups">{r.acceptCompatibleGroups ? 'Compatible groups accepted' : 'Exact match only'}</Item>
-          <Item label="Raised">
-            {formatDateTime(r.createdAt)} by {r.createdBy.name ?? 'staff'}
-          </Item>
-          {r.patientLabel && <Item label="Label">{r.patientLabel}</Item>}
-          {r.verification && (
-            <Item label={r.verificationStatus === 'rejected' ? 'Rejected' : 'Verified'}>
-              {formatDateTime(r.verification.at)} by {r.verification.by ?? 'staff'}
-            </Item>
-          )}
-          {r.closure && (
-            <Item label="Closed">
-              {formatDateTime(r.closure.at)}
-              {r.closure.unitsReceived !== null && ` · ${r.closure.unitsReceived} unit(s) received`}
-              {r.closure.note && ` · “${r.closure.note}”`}
-            </Item>
-          )}
-        </dl>
-        {r.clinicalNote && <p className="mt-3 rounded bg-slate-50 px-3 py-2 text-sm text-slate-700">{r.clinicalNote}</p>}
-        <p className="mt-3 text-xs text-slate-500">
-          Anyone can check this code at <span className="font-mono">/check/{r.publicCode}</span> — they see only its status, your facility
-          name and the blood group.
-        </p>
+
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 border-t border-slate-100 pt-4">
+          <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-3">
+            <dt className="text-2xs font-bold uppercase tracking-wider text-slate-500">Slots / Units</dt>
+            <dd className="mt-1 text-sm font-bold text-slate-900">
+              {r.slotsFilled} of {r.unitsRequested} assigned
+            </dd>
+          </div>
+          <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-3">
+            <dt className="text-2xs font-bold uppercase tracking-wider text-slate-500">Needed by</dt>
+            <dd className="mt-1 text-sm font-semibold text-slate-900">
+              {formatDateTime(r.deadlineAt)}
+              {active && <span className="block text-2xs font-bold text-brand-700 mt-0.5">{relativeTime(r.deadlineAt)}</span>}
+            </dd>
+          </div>
+          <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-3">
+            <dt className="text-2xs font-bold uppercase tracking-wider text-slate-500">Matching Criteria</dt>
+            <dd className="mt-1 text-sm font-semibold text-slate-900">
+              {r.acceptCompatibleGroups ? 'Compatible groups accepted' : 'Exact match only'}
+            </dd>
+          </div>
+          <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-3">
+            <dt className="text-2xs font-bold uppercase tracking-wider text-slate-500">Created</dt>
+            <dd className="mt-1 text-sm font-semibold text-slate-900">
+              {formatDateTime(r.createdAt)}
+              <span className="block text-2xs text-slate-500 mt-0.5">by {r.createdBy.name ?? 'staff'}</span>
+            </dd>
+          </div>
+        </div>
+
+        {(r.patientLabel || r.verification || r.closure) && (
+          <dl className="grid gap-x-6 gap-y-2 border-t border-slate-100 pt-3 text-xs sm:grid-cols-3">
+            {r.patientLabel && <Item label="Staff Label">{r.patientLabel}</Item>}
+            {r.verification && (
+              <Item label={r.verificationStatus === 'rejected' ? 'Rejected' : 'Verified'}>
+                {formatDateTime(r.verification.at)} by {r.verification.by ?? 'staff'}
+              </Item>
+            )}
+            {r.closure && (
+              <Item label="Closed">
+                {formatDateTime(r.closure.at)}
+                {r.closure.unitsReceived !== null && ` · ${r.closure.unitsReceived} unit(s) received`}
+                {r.closure.note && ` · “${r.closure.note}”`}
+              </Item>
+            )}
+          </dl>
+        )}
+
+        {r.clinicalNote && (
+          <div className="rounded-xl border border-blue-100 bg-blue-50/50 p-3 text-xs text-blue-900">
+            <strong className="block text-2xs uppercase tracking-wider text-blue-700 mb-0.5">Clinical Note (Staff Only)</strong>
+            {r.clinicalNote}
+          </div>
+        )}
+
+        <div className="flex items-center gap-2 rounded-xl border border-slate-100 bg-slate-50/70 p-3 text-xs text-slate-500">
+          <svg className="h-4 w-4 shrink-0 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span>
+            Anyone can check this code at <span className="font-mono font-semibold text-slate-700">/check/{r.publicCode}</span> — public verification exposes only verified status, facility name, and blood group without sensitive clinical data.
+          </span>
+        </div>
       </header>
 
       {r.duplicateReview.status !== 'none' && (

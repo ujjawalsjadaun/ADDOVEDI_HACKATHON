@@ -46,22 +46,27 @@ export function HospitalsPanel() {
   return (
     <section className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div role="group" aria-label="Filter by status" className="flex flex-wrap gap-1">
+        <div role="group" aria-label="Filter by status" className="inline-flex rounded-xl bg-slate-100 p-1 border border-slate-200/80">
           {FILTERS.map((f) => (
             <button
               key={f.label}
               type="button"
               aria-pressed={filter === f.value}
               onClick={() => setFilter(f.value)}
-              className={`rounded-full px-3 py-1 text-sm ${
-                filter === f.value ? 'bg-slate-900 text-white' : 'bg-white text-slate-700 ring-1 ring-slate-300 hover:bg-slate-50'
+              className={`rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-all duration-150 ${
+                filter === f.value
+                  ? 'bg-white text-slate-900 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
               }`}
             >
               {f.label}
             </button>
           ))}
         </div>
-        <button type="button" className="btn-primary" onClick={() => setShowCreate((s) => !s)} aria-expanded={showCreate}>
+        <button type="button" className="btn-primary text-xs min-h-9 py-1.5" onClick={() => setShowCreate((s) => !s)} aria-expanded={showCreate}>
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={showCreate ? "M6 18L18 6M6 6l12 12" : "M12 4v16m8-8H4"} />
+          </svg>
           {showCreate ? 'Close form' : 'Add facility'}
         </button>
       </div>
@@ -77,7 +82,7 @@ export function HospitalsPanel() {
           {filter ? `There are no ${filter} facilities.` : 'Add the first facility to get started.'}
         </EmptyState>
       ) : (
-        <ul className="space-y-3">
+        <ul className="space-y-3.5">
           {hospitals.data.data.map((h) => (
             <HospitalRow key={h.id} hospital={h} />
           ))}
@@ -93,22 +98,28 @@ function HospitalRow({ hospital }: { hospital: HospitalAdmin }) {
   const action = ACTIONS[hospital.verificationStatus].find((a) => a.decision === pending);
 
   return (
-    <li className="card">
+    <li className="card border-slate-200 hover:border-slate-300">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
+        <div className="min-w-0 space-y-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h3 className="font-semibold">{hospital.name}</h3>
+            <h3 className="text-base font-bold text-slate-900">{hospital.name}</h3>
             <StatusBadge status={hospital.verificationStatus} />
           </div>
-          <p className="mt-0.5 text-sm text-slate-600">
-            {TYPE_LABEL[hospital.facilityType]} · {hospital.district} · {hospital.staffCount} staff
-          </p>
-          <p className="text-sm text-slate-600">{hospital.address}</p>
-          <p className="text-xs text-slate-500">Registered contact: {hospital.registeredPhone}</p>
+          <div className="flex flex-wrap items-center gap-x-2.5 text-xs text-slate-500 font-medium">
+            <span className="rounded bg-slate-100 px-2 py-0.5 text-2xs font-semibold text-slate-700">
+              {TYPE_LABEL[hospital.facilityType]}
+            </span>
+            <span>·</span>
+            <span>{hospital.district}</span>
+            <span>·</span>
+            <span>{hospital.staffCount} staff member{hospital.staffCount === 1 ? '' : 's'}</span>
+          </div>
+          <p className="text-xs text-slate-600">{hospital.address}</p>
+          <p className="text-2xs text-slate-500">Official contact: {hospital.registeredPhone}</p>
           {hospital.verification && (
-            <p className="mt-1 text-xs text-slate-500">
-              Last decision {new Date(hospital.verification.at).toLocaleString()}: “{hospital.verification.reason}”
-            </p>
+            <div className="rounded-lg border border-slate-100 bg-slate-50/70 p-2 text-2xs text-slate-500 italic">
+              Decision on {new Date(hospital.verification.at).toLocaleString()}: “{hospital.verification.reason}”
+            </div>
           )}
         </div>
         {!pending && (

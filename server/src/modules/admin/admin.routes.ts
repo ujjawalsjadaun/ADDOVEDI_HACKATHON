@@ -4,6 +4,7 @@ import { requireRole } from '../../middleware/authorize';
 import { adminAuditRoutes } from '../audit/audit.routes';
 import { adminOverviewRoutes } from '../dashboard/dashboard.routes';
 import { adminDonorRoutes } from '../donors/donor.routes';
+import { adminEscalationRoutes } from './admin.escalation.routes';
 import { adminHospitalRoutes } from '../hospitals/hospital.routes';
 import { adminReportRoutes } from '../public-checker/checker.routes';
 import { adminNotificationRoutes } from '../notifications/notification.routes';
@@ -17,6 +18,7 @@ export function adminRoutes(config: Config): Router {
   router.use('/hospitals', adminHospitalRoutes());
   router.use('/users', adminUserRoutes());
   router.use('/donors', adminDonorRoutes());
+  router.use('/escalations', adminEscalationRoutes());
   router.use('/audit', adminAuditRoutes());
   router.use('/suspicious-reports', adminReportRoutes());
   router.use('/notifications', adminNotificationRoutes(config));

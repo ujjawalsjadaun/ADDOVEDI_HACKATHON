@@ -4,6 +4,7 @@ import './audit/audit.model';
 import './users/user.model';
 import './hospitals/hospital.model';
 import './requests/request.model';
+import './requests/escalationEvent.model';
 import './idempotency/idempotency.model';
 import './public-checker/suspiciousReport.model';
 import './donors/donor.model';

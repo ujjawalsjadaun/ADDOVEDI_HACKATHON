@@ -2,6 +2,7 @@ import type {
   BloodGroup,
   ClosureReason,
   DuplicateReviewStatus,
+  EscalationOutcome,
   PublicRequestStatusValue,
   RequestStatus,
   RequestVerificationStatus,
@@ -91,3 +92,31 @@ export type PublicRequestStatus =
       deadlineAt: string | null;
       updatedAt: string;
     };
+
+export interface EscalationEventView {
+  step: number;
+  outcome: EscalationOutcome;
+  at: string;
+  detail?: Record<string, unknown> | null;
+}
+
+export interface AdminEscalationItem {
+  id: string;
+  requestId: string;
+  publicCode: string;
+  facilityId: string;
+  facilityName: string | null;
+  facilityDistrict: string | null;
+  bloodGroup: BloodGroup;
+  unitsRequested: number;
+  slotsFilled: number;
+  urgency: Urgency;
+  requestStatus: RequestStatus;
+  escalationStep: number;
+  verifiedAt: string;
+  deadlineAt: string;
+  elapsedMinutes: number;
+  alertBatches: number;
+  events: EscalationEventView[];
+}
+

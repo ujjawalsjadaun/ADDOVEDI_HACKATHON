@@ -21,16 +21,20 @@ export function ReportsPanel() {
 
   return (
     <section className="space-y-4">
-      <div role="group" aria-label="Show" className="flex gap-1">
+      <div role="group" aria-label="Show" className="inline-flex rounded-xl bg-slate-100 p-1 border border-slate-200/80">
         {(['open', 'reviewed'] as const).map((s) => (
           <button
             key={s}
             type="button"
             aria-pressed={status === s}
             onClick={() => setStatus(s)}
-            className={`rounded-full px-3 py-1 text-sm ${status === s ? 'bg-slate-900 text-white' : 'bg-white text-slate-700 ring-1 ring-slate-300 hover:bg-slate-50'}`}
+            className={`rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-all duration-150 ${
+              status === s
+                ? 'bg-white text-slate-900 shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
+            }`}
           >
-            {s === 'open' ? 'Open' : 'Reviewed'}
+            {s === 'open' ? 'Open Reports' : 'Reviewed Reports'}
           </button>
         ))}
       </div>
@@ -41,7 +45,7 @@ export function ReportsPanel() {
       ) : q.data!.data.length === 0 ? (
         <EmptyState title={status === 'open' ? 'No open reports' : 'No reviewed reports'} />
       ) : (
-        <ul className="space-y-3">
+        <ul className="space-y-3.5">
           {q.data!.data.map((r) => (
             <ReportRow key={r.id} report={r} />
           ))}
@@ -55,7 +59,7 @@ function ReportRow({ report: r }: { report: SuspiciousReportView }) {
   const [reviewing, setReviewing] = useState(false);
   const review = useReviewReport();
   return (
-    <li className="card">
+    <li className="card border-slate-200 hover:border-slate-300">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 space-y-1">
           <div className="flex flex-wrap items-center gap-2">

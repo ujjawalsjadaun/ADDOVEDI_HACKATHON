@@ -29,7 +29,7 @@ describe('app shell', () => {
     renderApp('/');
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(/verified blood requests/i);
     const nav = screen.getAllByRole('navigation', { name: 'Primary' })[0]!;
-    for (const label of ['Is this real?', 'Hospital', 'Donor', 'Coordinator', 'Admin']) {
+    for (const label of ['Is this real?', 'Ask for blood', 'Sign in']) {
       expect(within(nav).getByRole('link', { name: label })).toBeInTheDocument();
     }
     expect(await screen.findByText('Server connected')).toBeInTheDocument();

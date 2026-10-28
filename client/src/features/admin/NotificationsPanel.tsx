@@ -43,14 +43,18 @@ export function NotificationsPanel() {
       {h?.oldestPendingAt && <p className="text-sm text-amber-800">Oldest queued message waiting since {relativeTime(h.oldestPendingAt)}.</p>}
 
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div role="group" aria-label="Filter" className="flex flex-wrap gap-1">
+        <div role="group" aria-label="Filter" className="inline-flex rounded-xl bg-slate-100 p-1 border border-slate-200/80">
           {FILTERS.map((f) => (
             <button
               key={f ?? 'all'}
               type="button"
               aria-pressed={status === f}
               onClick={() => setStatus(f)}
-              className={`rounded-full px-3 py-1 text-sm ${status === f ? 'bg-slate-900 text-white' : 'bg-white text-slate-700 ring-1 ring-slate-300 hover:bg-slate-50'}`}
+              className={`rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-all duration-150 ${
+                status === f
+                  ? 'bg-white text-slate-900 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
+              }`}
             >
               {f ? STATUS[f].label.split(' (')[0] : 'All'}
             </button>

@@ -4,9 +4,12 @@ import { ConfigError, loadConfig, type Config } from './config/env';
 import { createLogger } from './lib/logger';
 import { connectDb, disconnectDb } from './lib/db';
 import { ensureIndexes } from './lib/indexes';
+import { checkTransactionsSupported } from './lib/transaction';
 import { createApp } from './app';
 import { startRealtime } from './realtime/socket';
 import { startOutboxWorker } from './workers/outboxWorker';
+import { startEscalationWorker } from './workers/escalationWorker';
+import { startExpiryWorker } from './workers/expiryWorker';
 
 if (existsSync('.env')) process.loadEnvFile('.env');
 
@@ -35,6 +38,12 @@ async function connectWithRetry(): Promise<void> {
   try {
     await connectDb(config.MONGODB_URI);
     logger.info('database connected');
+    const txSupported = await checkTransactionsSupported();
+    if (txSupported) {
+      logger.info('database transactions active (replica set / mongos)');
+    } else {
+      logger.warn('database running on standalone mongod — transactions disabled (safe fallback for local development)');
+    }
   } catch (err) {
     logger.error({ err: (err as Error).message }, `database connection failed — degraded mode, retrying in ${DB_RETRY_MS / 1000}s`);
     dbRetryTimer = setTimeout(() => void connectWithRetry(), DB_RETRY_MS);
@@ -54,6 +63,8 @@ const app = createApp({ config, logger });
 const httpServer = createServer(app);
 const io = startRealtime(httpServer, config, logger);
 const stopOutbox = startOutboxWorker(config, logger);
+const stopEscalation = startEscalationWorker(config, logger);
+const stopExpiry = startExpiryWorker(config, logger);
 
 httpServer.listen(config.PORT, () => {
   logger.info(`API listening on http://localhost:${config.PORT} (env=${config.NODE_ENV}, demoMode=${config.DEMO_MODE})`);
@@ -66,6 +77,8 @@ async function shutdown(signal: string) {
   logger.info({ signal }, 'shutting down');
   clearTimeout(dbRetryTimer);
   stopOutbox();
+  stopEscalation();
+  stopExpiry();
   await io.close();
   httpServer.close();
   await disconnectDb().catch(() => undefined);

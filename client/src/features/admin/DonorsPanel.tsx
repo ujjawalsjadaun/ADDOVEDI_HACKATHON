@@ -21,19 +21,21 @@ export function DonorsPanel() {
 
   return (
     <section className="space-y-4">
-      <p className="text-sm text-slate-600">
-        Verify that a donor is a real, reachable person and that their stated blood group is plausible (e.g. from a donor card). This is
-        not a medical check.
-      </p>
-      <div role="group" aria-label="Filter donors" className="flex flex-wrap gap-1">
+      <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-3.5 text-xs text-slate-600 leading-relaxed">
+        <strong>Verification Guideline:</strong> Confirm identity authenticity and stated blood group plausibility (e.g. government donor registry, hospital card). This administrative check precedes dispatch alerts.
+      </div>
+
+      <div role="group" aria-label="Filter donors" className="inline-flex rounded-xl bg-slate-100 p-1 border border-slate-200/80">
         {FILTERS.map((f) => (
           <button
             key={f.id}
             type="button"
             aria-pressed={view.id === f.id}
             onClick={() => setView(f)}
-            className={`rounded-full px-3 py-1 text-sm ${
-              view.id === f.id ? 'bg-slate-900 text-white' : 'bg-white text-slate-700 ring-1 ring-slate-300 hover:bg-slate-50'
+            className={`rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-all duration-150 ${
+              view.id === f.id
+                ? 'bg-white text-slate-900 shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
             }`}
           >
             {f.label}
@@ -48,7 +50,7 @@ export function DonorsPanel() {
       ) : donors.data.data.length === 0 ? (
         <EmptyState title="No donors here">Nothing matches this filter.</EmptyState>
       ) : (
-        <ul className="space-y-3">
+        <ul className="space-y-3.5">
           {donors.data.data.map((d) => (
             <DonorRow key={d.userId} donor={d} />
           ))}
@@ -71,24 +73,31 @@ function DonorRow({ donor: d }: { donor: AdminDonorView }) {
   ];
 
   return (
-    <li className="card">
+    <li className="card border-slate-200 hover:border-slate-300">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
+        <div className="min-w-0 space-y-1">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded bg-brand-50 px-2 py-0.5 text-sm font-bold text-brand-700">{d.bloodGroup}</span>
-            <h3 className="font-semibold">{d.name}</h3>
+            <span className="inline-flex items-center rounded-md bg-brand-50 px-2 py-0.5 font-mono text-2xs font-bold text-brand-700 border border-brand-200">
+              {d.bloodGroup}
+            </span>
+            <h3 className="text-base font-bold text-slate-900">{d.name}</h3>
             <StatusBadge status={d.verificationStatus} tone={d.verificationStatus === 'verified' ? 'green' : 'amber'} />
             {d.reviewStatus === 'under_review' && <StatusBadge status="under_review" label="under review" tone="red" />}
             {d.accountStatus !== 'active' && <StatusBadge status={d.accountStatus} />}
           </div>
-          <p className="text-sm text-slate-600">
+          <p className="text-xs text-slate-500 font-medium">
             {d.email}
-            {d.phoneMasked && ` · ${d.phoneMasked}`} · {d.anchorLabel ?? 'no location'} · {d.availability}
+            {d.phoneMasked && ` · ${d.phoneMasked}`} · {d.anchorLabel ?? 'No location centroid'} · <span className="capitalize">{d.availability}</span>
           </p>
-          <p className="text-xs text-slate-500">
-            Last donation: {d.lastDonationOn ?? 'unknown'} · missed donations (180 days): {d.strikesLast180Days} · consent: contact{' '}
-            {d.consent.contact ? 'yes' : 'no'}, location {d.consent.location ? 'yes' : 'no'} · registered {formatDateTime(d.createdAt)}
-          </p>
+          <div className="flex flex-wrap items-center gap-x-2 text-2xs text-slate-400 pt-0.5">
+            <span>Last donation: <strong className="text-slate-600">{d.lastDonationOn ?? 'unknown'}</strong></span>
+            <span>·</span>
+            <span>Missed: <strong className="text-slate-600">{d.strikesLast180Days}</strong> (180d)</span>
+            <span>·</span>
+            <span>Consent: contact {d.consent.contact ? '✓' : '✗'}, location {d.consent.location ? '✓' : '✗'}</span>
+            <span>·</span>
+            <span>Registered {formatDateTime(d.createdAt)}</span>
+          </div>
         </div>
         {!pending && (
           <div className="flex flex-wrap gap-2">
@@ -96,7 +105,11 @@ function DonorRow({ donor: d }: { donor: AdminDonorView }) {
               <button
                 key={a.label}
                 type="button"
-                className={a.danger ? 'btn-secondary text-red-700' : 'btn-secondary'}
+                className={
+                  a.danger
+                    ? 'btn-secondary text-xs min-h-8 py-1 px-3 text-rose-700 hover:text-rose-800 hover:border-rose-200'
+                    : 'btn-secondary text-xs min-h-8 py-1 px-3'
+                }
                 onClick={() => {
                   decide.reset();
                   setPending(a);

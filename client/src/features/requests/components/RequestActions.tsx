@@ -28,15 +28,26 @@ export function RequestActions({ request }: { request: RequestDetail }) {
   if (available.length === 0) return null;
 
   return (
-    <section className="card space-y-3" aria-label="Actions">
-      <h3 className="font-semibold">Actions</h3>
+    <section className="card space-y-3.5 border-slate-200" aria-label="Actions">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-base font-bold text-slate-900">Clinical Workflow Actions</h3>
+          <p className="text-xs text-slate-500">Authorized role operations available for this request state</p>
+        </div>
+      </div>
       {!open && (
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2.5 pt-1">
           {available.map((b) => (
             <button
               key={b.action}
               type="button"
-              className={b.primary ? 'btn-primary' : b.danger ? 'btn-secondary text-red-700' : 'btn-secondary'}
+              className={
+                b.primary
+                  ? 'btn-primary text-xs min-h-9 py-1.5'
+                  : b.danger
+                  ? 'btn-secondary text-xs min-h-9 py-1.5 text-rose-700 hover:text-rose-800 hover:border-rose-200 hover:bg-rose-50/60'
+                  : 'btn-secondary text-xs min-h-9 py-1.5'
+              }
               onClick={() => start(b.action)}
             >
               {b.label}

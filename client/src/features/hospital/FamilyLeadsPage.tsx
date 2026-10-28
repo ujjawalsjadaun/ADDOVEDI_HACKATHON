@@ -25,24 +25,28 @@ export function FamilyLeadsPage() {
   const q = useFamilyLeads(status);
 
   return (
-    <section className="space-y-4">
+    <section className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold">Family leads</h2>
-          <p className="text-sm text-slate-600">
-            Call the family back on their number, confirm the patient and the need, then raise an official request — or reject the lead.
+          <h2 className="text-xl font-bold tracking-tight text-slate-900">Family leads</h2>
+          <p className="text-xs text-slate-500">
+            Inbound urgent requests submitted by patients and families for triage and clinical confirmation.
           </p>
         </div>
         <DataFreshness updatedAt={q.dataUpdatedAt} staleAfterMs={90_000} isFetching={q.isFetching} isError={q.isError} onRefresh={() => void q.refetch()} />
       </div>
-      <div role="group" aria-label="Show" className="flex flex-wrap gap-1">
+      <div role="group" aria-label="Show" className="inline-flex rounded-xl bg-slate-100 p-1 border border-slate-200/80">
         {VIEWS.map((v) => (
           <button
             key={v.label}
             type="button"
             aria-pressed={status === v.id}
             onClick={() => setStatus(v.id)}
-            className={`rounded-full px-3 py-1 text-sm ${status === v.id ? 'bg-slate-900 text-white' : 'bg-white text-slate-700 ring-1 ring-slate-300 hover:bg-slate-50'}`}
+            className={`rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-all duration-150 ${
+              status === v.id
+                ? 'bg-white text-slate-900 shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
+            }`}
           >
             {v.label}
           </button>
@@ -72,37 +76,60 @@ function LeadRow({ lead }: { lead: FamilyLeadView }) {
   const reject = useRejectLead();
 
   return (
-    <li className="card space-y-2">
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="font-mono text-sm text-slate-500">{lead.reference}</span>
-        <span className="font-semibold">{lead.contactName}</span>
-        <a href={`tel:${lead.contactPhone}`} className="text-sm font-medium text-brand-700 underline">
-          {lead.contactPhone}
-        </a>
-        {lead.bloodGroup && <span className="rounded bg-brand-50 px-2 py-0.5 text-sm font-bold text-brand-700">{lead.bloodGroup}</span>}
+    <li className="card space-y-3.5 border-slate-200">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="font-mono text-xs font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">{lead.reference}</span>
+          <span className="font-bold text-slate-900">{lead.contactName}</span>
+          <a
+            href={`tel:${lead.contactPhone}`}
+            className="inline-flex items-center gap-1 rounded-md bg-brand-50 px-2 py-0.5 text-xs font-semibold text-brand-700 hover:bg-brand-100 transition-colors"
+          >
+            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+            </svg>
+            {lead.contactPhone}
+          </a>
+          {lead.bloodGroup && (
+            <span className="inline-flex items-center rounded-md bg-brand-50 px-2 py-0.5 font-mono text-xs font-bold text-brand-700 border border-brand-200">
+              {lead.bloodGroup}
+            </span>
+          )}
+        </div>
         <StatusBadge status={lead.status} tone={lead.status === 'pending' ? 'amber' : lead.status === 'confirmed' ? 'green' : 'slate'} />
       </div>
-      {lead.note && <p className="text-sm text-slate-700">“{lead.note}”</p>}
-      <p className="text-xs text-slate-500">
-        Sent {formatDateTime(lead.createdAt)}
-        {lead.status === 'pending' && ` · expires ${relativeTime(lead.expiresAt)}`}
-        {lead.decidedBy && ` · ${lead.status} by ${lead.decidedBy}`}
-        {lead.reason && ` — “${lead.reason}”`}
-      </p>
-      {lead.linkedRequest && (
-        <Link to={`/hospital/requests/${lead.linkedRequest.id}`} className="text-sm font-medium text-brand-700 underline">
-          Open request {lead.linkedRequest.publicCode}
-        </Link>
+
+      {lead.note && (
+        <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-3 text-xs text-slate-700 italic">
+          “{lead.note}”
+        </div>
       )}
 
+      <div className="flex flex-wrap items-center justify-between gap-2 text-2xs text-slate-500">
+        <div>
+          Sent {formatDateTime(lead.createdAt)}
+          {lead.status === 'pending' && <span className="font-semibold text-amber-700"> · expires {relativeTime(lead.expiresAt)}</span>}
+          {lead.decidedBy && ` · ${lead.status} by ${lead.decidedBy}`}
+          {lead.reason && ` — “${lead.reason}”`}
+        </div>
+        {lead.linkedRequest && (
+          <Link to={`/hospital/requests/${lead.linkedRequest.id}`} className="inline-flex items-center gap-1 font-semibold text-brand-700 hover:underline">
+            <span>Open request {lead.linkedRequest.publicCode}</span>
+            <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </Link>
+        )}
+      </div>
+
       {lead.status === 'pending' && !mode && (
-        <div className="flex flex-wrap gap-2">
-          <button type="button" className="btn-primary" onClick={() => setMode('confirm')}>
+        <div className="flex flex-wrap gap-2 pt-1 border-t border-slate-100">
+          <button type="button" className="btn-primary text-xs min-h-9 py-1.5" onClick={() => setMode('confirm')}>
             Confirm &amp; raise request
           </button>
           <button
             type="button"
-            className="btn-secondary text-red-700"
+            className="btn-secondary text-xs min-h-9 py-1.5 text-rose-700 hover:text-rose-800"
             onClick={() => {
               reject.reset();
               setMode('reject');

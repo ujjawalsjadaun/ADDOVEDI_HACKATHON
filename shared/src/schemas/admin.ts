@@ -69,3 +69,9 @@ export const listUsersQuerySchema = paginationQuerySchema.extend({
   status: z.enum(USER_STATUSES).optional(),
   facilityId: objectIdSchema.optional(),
 });
+
+export const adminEscalationsQuerySchema = z.object({
+  open: z.enum(['true', 'false']).optional().default('true'),
+});
+export type AdminEscalationsQuery = z.infer<typeof adminEscalationsQuerySchema>;
+

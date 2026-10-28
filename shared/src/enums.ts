@@ -63,3 +63,7 @@ export const PUBLIC_REQUEST_STATUSES = [
   'rejected',
 ] as const;
 export type PublicRequestStatusValue = (typeof PUBLIC_REQUEST_STATUSES)[number];
+
+export const ESCALATION_OUTCOMES = ['executed', 'skipped_condition_not_met', 'failed'] as const;
+export type EscalationOutcome = (typeof ESCALATION_OUTCOMES)[number];
+

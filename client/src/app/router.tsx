@@ -23,6 +23,7 @@ import { CoordinatorRequestsPage } from '../features/coordinator/CoordinatorRequ
 import { AdminPage } from '../features/admin/AdminPage';
 import { OverviewPanel } from '../features/admin/OverviewPanel';
 import { RequestsPanel } from '../features/admin/RequestsPanel';
+import { EscalationsPanel } from '../features/admin/EscalationsPanel';
 import { HospitalsPanel } from '../features/admin/HospitalsPanel';
 import { UsersPanel } from '../features/admin/UsersPanel';
 import { DonorsPanel } from '../features/admin/DonorsPanel';
@@ -99,6 +100,7 @@ export const routes: RouteObject[] = [
           { index: true, element: <Navigate to="overview" replace /> },
           { path: 'overview', element: <OverviewPanel /> },
           { path: 'requests', element: <RequestsPanel /> },
+          { path: 'escalations', element: <EscalationsPanel /> },
           { path: 'requests/:id', element: <RequestDetailPage basePath="/admin/requests" /> },
           { path: 'map', lazy: loadRoadMap },
           { path: 'hospitals', element: <HospitalsPanel /> },

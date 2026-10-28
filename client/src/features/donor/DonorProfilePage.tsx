@@ -69,32 +69,71 @@ function ProfileForm({ profile }: { profile: DonorProfileView }) {
   const err = save.error;
 
   return (
-    <div className="mx-auto max-w-2xl space-y-4">
+    <div className="mx-auto max-w-2xl space-y-5">
       {welcome && (
-        <p role="status" className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
-          Welcome! Complete your profile below. An administrator will verify it before you receive alerts.
-        </p>
-      )}
-      <section className="card">
-        <div className="flex flex-wrap items-center gap-2">
-          <h1 className="text-xl font-semibold">{profile.name}</h1>
-          <StatusBadge status={profile.verificationStatus} tone={profile.verificationStatus === 'verified' ? 'green' : 'amber'} />
-          {profile.reviewStatus === 'under_review' && <StatusBadge status="under_review" label="under review" tone="red" />}
+        <div role="status" className="flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50/80 p-4 text-sm text-emerald-900 shadow-xs">
+          <svg className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <div>
+            <p className="font-semibold text-emerald-950">Welcome to Golden Hour Volunteer Network</p>
+            <p className="text-xs text-emerald-800 mt-0.5">Please complete your clinical eligibility profile below. An administrator will verify your profile before you receive dispatch alerts.</p>
+          </div>
         </div>
-        <p className="text-sm text-slate-600">
-          {profile.email}
-          {profile.phone && ` · ${profile.phone}`}
-          {profile.nextEligibleOn && ` · rest period ends ${profile.nextEligibleOn}`}
-          {profile.strikesLast180Days > 0 && ` · ${profile.strikesLast180Days} missed donation(s) in 180 days`}
-        </p>
+      )}
+      <section className="card space-y-3 border-slate-200">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600 border border-brand-100 font-bold text-base">
+              {profile.name.charAt(0).toUpperCase()}
+            </div>
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="text-lg font-bold text-slate-900">{profile.name}</h1>
+                <StatusBadge status={profile.verificationStatus} tone={profile.verificationStatus === 'verified' ? 'green' : 'amber'} />
+                {profile.reviewStatus === 'under_review' && <StatusBadge status="under_review" label="under review" tone="red" />}
+              </div>
+              <div className="flex flex-wrap items-center gap-x-2 text-xs text-slate-500 font-medium mt-0.5">
+                <span>{profile.email}</span>
+                {profile.phone && (
+                  <>
+                    <span>·</span>
+                    <span>{profile.phone}</span>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+          <span className="inline-flex items-center rounded-lg bg-brand-50 px-3 py-1 font-mono text-base font-bold text-brand-700 border border-brand-200">
+            {profile.bloodGroup}
+          </span>
+        </div>
+
+        {(profile.nextEligibleOn || profile.strikesLast180Days > 0) && (
+          <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3 text-2xs">
+            {profile.nextEligibleOn && (
+              <span className="rounded-md bg-blue-50 px-2.5 py-1 font-medium text-blue-700 border border-blue-200">
+                Rest period ends: {profile.nextEligibleOn}
+              </span>
+            )}
+            {profile.strikesLast180Days > 0 && (
+              <span className="rounded-md bg-rose-50 px-2.5 py-1 font-medium text-rose-700 border border-rose-200">
+                {profile.strikesLast180Days} missed donation(s) in last 180 days
+              </span>
+            )}
+          </div>
+        )}
       </section>
 
-      <form onSubmit={onSubmit} className="card space-y-5" noValidate>
+      <form onSubmit={onSubmit} className="card space-y-6 border-slate-200 shadow-sm" noValidate>
         <FormError error={err} />
         {saved && (
-          <p role="status" className="text-sm text-emerald-800">
-            Saved.
-          </p>
+          <div role="status" className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs font-semibold text-emerald-800">
+            <svg className="h-4 w-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+            Profile changes saved successfully.
+          </div>
         )}
 
         <SelectField
@@ -105,15 +144,15 @@ function ProfileForm({ profile }: { profile: DonorProfileView }) {
           hint={form.bloodGroup !== profile.bloodGroup ? 'Changing your blood group needs re-verification before you get alerts.' : undefined}
         />
 
-        <fieldset className="space-y-2">
-          <legend className="text-sm font-medium text-slate-800">Last blood donation</legend>
-          <label className="flex items-center gap-2 text-sm">
-            <input type="radio" name="donated" checked={form.donated === 'yes'} onChange={() => set('donated', 'yes')} /> On this date
+        <fieldset className="space-y-3 rounded-xl border border-slate-200/80 bg-slate-50/40 p-4">
+          <legend className="px-1 text-xs font-bold uppercase tracking-wider text-slate-700">Last blood donation history</legend>
+          <label className="flex items-center gap-2 text-xs font-medium text-slate-800 cursor-pointer">
+            <input type="radio" name="donated" checked={form.donated === 'yes'} onChange={() => set('donated', 'yes')} className="text-brand-600 focus:ring-brand-500" /> On this date
           </label>
           {form.donated === 'yes' && (
             <div className="max-w-xs pl-6">
               <TextField
-                label="Date"
+                label="Donation Date"
                 type="date"
                 max={new Date().toISOString().slice(0, 10)}
                 value={form.lastDonationOn}
@@ -122,57 +161,64 @@ function ProfileForm({ profile }: { profile: DonorProfileView }) {
               />
             </div>
           )}
-          <label className="flex items-center gap-2 text-sm">
-            <input type="radio" name="donated" checked={form.donated === 'never'} onChange={() => set('donated', 'never')} /> I have never donated
+          <label className="flex items-center gap-2 text-xs font-medium text-slate-800 cursor-pointer">
+            <input type="radio" name="donated" checked={form.donated === 'never'} onChange={() => set('donated', 'never')} className="text-brand-600 focus:ring-brand-500" /> I have never donated
           </label>
-          <p className="text-xs text-slate-500">
+          <p className="text-2xs text-slate-500 pt-1 border-t border-slate-200/60">
             Don't remember?{' '}
-            <button type="button" className="underline" disabled={unknown.isPending} onClick={() => unknown.mutate()}>
+            <button type="button" className="font-semibold text-brand-700 underline" disabled={unknown.isPending} onClick={() => unknown.mutate()}>
               Mark it as unknown
             </button>{' '}
             — hospitals will then review you manually instead of alerting you automatically.
-            {!profile.lastDonationKnown && <strong> Currently marked unknown.</strong>}
+            {!profile.lastDonationKnown && <strong className="text-amber-800"> Currently marked unknown.</strong>}
           </p>
         </fieldset>
 
-        <fieldset className="space-y-3 rounded-md border border-slate-200 p-3">
-          <legend className="px-1 text-sm font-medium">Approximate location</legend>
+        <fieldset className="space-y-4 rounded-xl border border-slate-200/80 bg-slate-50/40 p-4">
+          <legend className="px-1 text-xs font-bold uppercase tracking-wider text-slate-700">Approximate location &amp; routing</legend>
           <CheckboxField
             label="Use my approximate location to estimate travel time"
-            hint="Rounded to about 1 km. Never shown to the public; hospitals see only the place name below."
+            hint="Rounded to ~1 km centroid for privacy. Never exposed publicly; dispatch calculates ETA only."
             checked={form.location}
             onChange={(e) => set('location', e.target.checked)}
           />
           {form.location && (
-            <>
+            <div className="space-y-3 pt-2 border-t border-slate-200/60">
               <TextField
-                label="Village / locality"
+                label="Village / locality name"
+                placeholder="e.g. Indiranagar, Sector 4"
                 value={form.anchorLabel}
                 onChange={(e) => set('anchorLabel', e.target.value)}
                 error={fieldError(err, 'anchor.label')}
               />
               <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
-                <TextField label="Latitude" inputMode="decimal" value={form.lat} onChange={(e) => set('lat', e.target.value)} error={fieldError(err, 'anchor.lat')} />
-                <TextField label="Longitude" inputMode="decimal" value={form.lng} onChange={(e) => set('lng', e.target.value)} error={fieldError(err, 'anchor.lng')} />
-                <button type="button" className="btn-secondary" onClick={useMyLocation}>
-                  Use my location
+                <TextField label="Latitude" inputMode="decimal" placeholder="12.9716" value={form.lat} onChange={(e) => set('lat', e.target.value)} error={fieldError(err, 'anchor.lat')} />
+                <TextField label="Longitude" inputMode="decimal" placeholder="77.5946" value={form.lng} onChange={(e) => set('lng', e.target.value)} error={fieldError(err, 'anchor.lng')} />
+                <button type="button" className="btn-secondary text-xs min-h-10" onClick={useMyLocation}>
+                  <svg className="h-4 w-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  Detect GPS
                 </button>
               </div>
-              {geoError && <p className="text-xs text-red-700">{geoError}</p>}
-              <p className="text-xs text-slate-500">Saved coordinates are rounded to about 1 km.</p>
-            </>
+              {geoError && <p className="text-xs text-rose-700">{geoError}</p>}
+              <p className="text-2xs text-slate-500">Coordinates are permanently truncated to 1 km precision.</p>
+            </div>
           )}
         </fieldset>
 
-        <CheckboxField
-          label="Hospitals may contact me when my blood group is needed"
-          hint="Turning this off stops all alerts. It does not cancel a donation you already accepted."
-          checked={form.contact}
-          onChange={(e) => set('contact', e.target.checked)}
-        />
+        <div className="rounded-xl border border-slate-100 bg-slate-50/50 p-4">
+          <CheckboxField
+            label="Hospitals may contact me when my blood group is needed"
+            hint="Turning this off pauses dispatch alerts. It does not cancel an accepted emergency in progress."
+            checked={form.contact}
+            onChange={(e) => set('contact', e.target.checked)}
+          />
+        </div>
 
-        <button type="submit" className="btn-primary" disabled={save.isPending}>
-          {save.isPending ? 'Saving…' : 'Save profile'}
+        <button type="submit" className="btn-primary min-h-11 px-6" disabled={save.isPending}>
+          {save.isPending ? 'Saving changes…' : 'Save profile'}
         </button>
       </form>
     </div>

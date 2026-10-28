@@ -39,23 +39,30 @@ export function StockTransfersPage() {
     <section className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold">Stock transfers</h2>
-          <p className="text-sm text-slate-600">Ask another verified facility or blood bank for units, or answer their requests.</p>
+          <h2 className="text-xl font-bold tracking-tight text-slate-900">Stock transfers</h2>
+          <p className="text-xs text-slate-500">Request emergency blood units from verified facilities or blood banks, or respond to inbound requests.</p>
         </div>
-        <button type="button" className="btn-primary" onClick={() => setCreating((c) => !c)} aria-expanded={creating}>
+        <button type="button" className="btn-primary text-xs min-h-9 py-1.5" onClick={() => setCreating((c) => !c)} aria-expanded={creating}>
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={creating ? "M6 18L18 6M6 6l12 12" : "M12 4v16m8-8H4"} />
+          </svg>
           {creating ? 'Close form' : 'Request stock'}
         </button>
       </div>
       {creating && <CreateTransferForm onDone={() => setCreating(false)} />}
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div role="group" aria-label="Direction" className="flex gap-1">
+        <div role="group" aria-label="Direction" className="inline-flex rounded-xl bg-slate-100 p-1 border border-slate-200/80">
           {(['outgoing', 'incoming'] as const).map((d) => (
             <button
               key={d}
               type="button"
               aria-pressed={direction === d}
               onClick={() => setDirection(d)}
-              className={`rounded-full px-3 py-1 text-sm ${direction === d ? 'bg-slate-900 text-white' : 'bg-white text-slate-700 ring-1 ring-slate-300 hover:bg-slate-50'}`}
+              className={`rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-all duration-150 ${
+                direction === d
+                  ? 'bg-white text-slate-900 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
+              }`}
             >
               {d === 'outgoing' ? 'We requested' : 'Requested from us'}
             </button>
@@ -70,7 +77,7 @@ export function StockTransfersPage() {
       ) : q.data!.length === 0 ? (
         <EmptyState title="No stock transfers" />
       ) : (
-        <ul className="space-y-3">
+        <ul className="space-y-3.5">
           {q.data!.map((t) => (
             <TransferRow key={t.id} transfer={t} direction={direction} />
           ))}
@@ -98,21 +105,37 @@ function TransferRow({ transfer: t, direction }: { transfer: StockTransferView; 
   }
 
   return (
-    <li className="card space-y-2">
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="rounded bg-brand-50 px-2 py-0.5 text-sm font-bold text-brand-700">{t.bloodGroup}</span>
-        <span className="font-semibold">
-          {t.units} unit(s) {direction === 'outgoing' ? 'from' : 'for'} {other.name}
-        </span>
-        <StatusBadge status={t.status} tone={STATUS_TONE[t.status]} />
-        {t.offeredUnits !== null && <span className="text-sm text-slate-600">{t.offeredUnits} offered</span>}
-        {t.relatedRequest && <span className="font-mono text-xs text-slate-500">for {t.relatedRequest.publicCode}</span>}
+    <li className="card space-y-3 border-slate-200 hover:border-slate-300">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="inline-flex items-center rounded-md bg-brand-50 px-2 py-0.5 font-mono text-2xs font-bold text-brand-700 border border-brand-200">
+            {t.bloodGroup}
+          </span>
+          <span className="font-bold text-slate-900">
+            {t.units} unit(s) {direction === 'outgoing' ? 'from' : 'for'} {other.name}
+          </span>
+          <StatusBadge status={t.status} tone={STATUS_TONE[t.status]} />
+          {t.offeredUnits !== null && (
+            <span className="rounded bg-slate-100 px-2 py-0.5 text-2xs font-semibold text-slate-700">
+              {t.offeredUnits} offered
+            </span>
+          )}
+          {t.relatedRequest && (
+            <span className="font-mono text-2xs font-medium text-slate-500 bg-slate-50 border border-slate-200 px-1.5 py-0.5 rounded">
+              for {t.relatedRequest.publicCode}
+            </span>
+          )}
+        </div>
       </div>
-      {t.note && <p className="text-sm text-slate-700">“{t.note}”</p>}
-      <ol className="text-xs text-slate-500">
+      {t.note && (
+        <div className="rounded-lg border border-slate-100 bg-slate-50/70 p-2.5 text-xs text-slate-700 italic">
+          “{t.note}”
+        </div>
+      )}
+      <ol className="text-2xs text-slate-400 space-y-0.5 pl-2 border-l-2 border-slate-100">
         {t.history.map((h, i) => (
           <li key={i}>
-            {formatDateTime(h.at)} — {h.status}
+            <span className="font-medium text-slate-600">{formatDateTime(h.at)}</span> — {h.status}
             {h.by && ` by ${h.by}`}
             {h.note && `: “${h.note}”`}
           </li>
@@ -120,12 +143,16 @@ function TransferRow({ transfer: t, direction }: { transfer: StockTransferView; 
       </ol>
       <FormError error={act.error} />
       {!pending && t.allowedActions.length > 0 && (
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 pt-1 border-t border-slate-100">
           {t.allowedActions.map((a) => (
             <button
               key={a}
               type="button"
-              className={a === 'decline' || a === 'cancel' ? 'btn-secondary text-red-700' : 'btn-secondary'}
+              className={
+                a === 'decline' || a === 'cancel'
+                  ? 'btn-secondary text-xs min-h-8 py-1 px-3 text-rose-700 hover:text-rose-800 hover:border-rose-200'
+                  : 'btn-secondary text-xs min-h-8 py-1 px-3'
+              }
               onClick={() => {
                 act.reset();
                 setNote('');

@@ -1,6 +1,7 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type {
   AdminDonorView,
+  AdminEscalationItem,
   AdminOverview,
   AuditEntryView,
   NotificationQueueHealth,
@@ -181,3 +182,17 @@ export function useRetryNotification() {
     onSettled: () => queryClient.invalidateQueries({ queryKey: NOTIFICATIONS_KEY }),
   });
 }
+
+// ── escalations (Phase 10) ──────────────────────────────────────────────────
+
+const ESCALATIONS_KEY = ['admin', 'escalations'] as const;
+
+export function useAdminEscalations(filter: { open?: 'true' | 'false' } = {}) {
+  return useQuery({
+    queryKey: [...ESCALATIONS_KEY, filter],
+    queryFn: () => api<AdminEscalationItem[]>(`/admin/escalations${toQueryString(filter)}`),
+    placeholderData: keepPreviousData,
+    refetchInterval: 15_000,
+  });
+}
+
