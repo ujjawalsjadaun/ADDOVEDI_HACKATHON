@@ -1,5 +1,6 @@
 import type { Logger } from 'pino';
 import type { Config } from '../config/env';
+import { isDbConnected } from '../lib/db';
 import { withTransaction } from '../lib/transaction';
 import { SYSTEM_ACTOR, recordAudit } from '../modules/audit/audit.service';
 import { RequestAlertModel } from '../modules/alerts/alert.model';
@@ -21,6 +22,7 @@ export async function processExpiry(config: Config, logger: Logger): Promise<{
   expiredLeads: number;
   purgedLeads: number;
 }> {
+  if (!isDbConnected()) return { expiredRequests: 0, expiredAlerts: 0, expiredLeads: 0, purgedLeads: 0 };
   const now = new Date();
 
   // 1. Overdue requests past deadline

@@ -84,5 +84,11 @@ async function shutdown(signal: string) {
   await disconnectDb().catch(() => undefined);
   process.exit(0);
 }
+// A stray rejected promise must be visible in the logs, not silently ignored or crash the demo mid-request.
+process.on('unhandledRejection', (reason) => logger.error({ err: reason }, 'unhandled promise rejection'));
+process.on('uncaughtException', (err) => {
+  logger.fatal({ err }, 'uncaught exception — shutting down');
+  void shutdown('uncaughtException');
+});
 process.on('SIGINT', () => void shutdown('SIGINT'));
 process.on('SIGTERM', () => void shutdown('SIGTERM'));

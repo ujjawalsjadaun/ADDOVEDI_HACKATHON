@@ -117,6 +117,10 @@ export async function alertNextBatch(
   if (request.requestStatus !== 'awaiting_donor') {
     throw new AppError('INVALID_TRANSITION', 'More donors can only be alerted while the request is waiting for donors.');
   }
+  // Every path (manual, escalation, slot refill after a withdrawal/no-show) honours an administrator's pause.
+  if (request.review) {
+    throw new AppError('INVALID_TRANSITION', 'This request is under administrator review; no more donors are alerted until it is cleared.');
+  }
   const facility = await HospitalModel.findById(request.facilityId);
   if (!facility) throw new AppError('NOT_FOUND', 'Not found.');
 

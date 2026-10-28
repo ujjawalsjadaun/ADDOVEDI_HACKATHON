@@ -79,6 +79,8 @@ Each entry: decision, why, and whether it needs review by a domain partner befor
 | D-64 | 2026-10-29 | A request past its deadline is closed as `expired` by the worker (an unverified one also gets `verificationStatus = expired`); donors still assigned get the "no longer needed" SMS. Supersedes D-32. | Closes the interim gap from Phase 4. | — |
 | D-65 | 2026-10-29 | `withTransaction` falls back to non-transactional execution on a standalone MongoDB (teammate's change). Atomicity and the audit-with-change guarantee then hold only on a replica set (Atlas); unique indexes still enforce the key invariants. | Lets contributors run a plain local mongod; production/demo must use Atlas. | — |
 
+| D-66 | 2026-10-29 | Phase 11 is a code-review and hardening pass (findings in `docs/security-review.md`); because of D-26 no test matrix or load test was produced. The review's fixes: pause honoured on every alert path, stale idempotency claims released after 2 min, workers quiet during DB outages, process-level error handlers, `Cache-Control: no-store` on the API. | Honest evidence standard without tests: what was reviewed, fixed, and left open. | — |
+
 ## Open questions (non-blocking; defaults above apply)
 
 1. Should a hospital be able to confirm fulfillment with fewer units than requested (partial)? Default: yes, `unitsReceived` recorded.

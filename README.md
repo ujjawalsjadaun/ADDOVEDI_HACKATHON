@@ -2,7 +2,7 @@
 
 Hospital-led, location-aware blood-request coordination for hill districts. Verified requests reach the most reachable compatible donors, ranked by road travel time rather than straight-line distance, with fallbacks for weak connectivity.
 
-> **Status:** Phase 10 — end-to-end flow (raise → verify → alert ranked donors in-app and by **simulated SMS** → race-safe accept → en route / arrived → donation → hospital-confirmed fulfilment), role dashboards, map and road reports, family leads, transport tasks, stock transfers, live updates over Socket.IO, and **automatic escalation (5/10/15 min), request expiry and an admin "under review" flag**. Travel times use live routing (optional) or a labelled simulation. No real SMS is ever sent.
+> **Status:** Phase 11 (review and hardening) — end-to-end flow (raise → verify → alert ranked donors in-app and by **simulated SMS** → race-safe accept → en route / arrived → donation → hospital-confirmed fulfilment), role dashboards, map and road reports, family leads, transport tasks, stock transfers, live updates over Socket.IO, and **automatic escalation (5/10/15 min), request expiry and an admin "under review" flag**. Travel times use live routing (optional) or a labelled simulation. No real SMS is ever sent.
 > All donor, patient and facility data in this project is synthetic. This is not an official dispatch service and makes no medical eligibility decisions.
 
 ## Stack
@@ -152,6 +152,7 @@ Full contracts: [docs/api-contracts.md](docs/api-contracts.md).
 
 ## Documentation
 
+- [Code review and known limitations](docs/security-review.md)
 - [Repository audit](docs/repository-audit.md)
 - [Requirements traceability](docs/requirements-traceability.md)
 - [Architecture](docs/architecture.md)

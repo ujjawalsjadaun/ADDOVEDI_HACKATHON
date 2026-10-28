@@ -6,6 +6,8 @@ import { isDuplicateKeyError } from '../../lib/transaction';
 import { IdempotencyKeyModel } from './idempotency.model';
 
 const TTL_MS = 24 * 60 * 60 * 1000;
+/** Handlers finish in seconds; an older unfinished claim belongs to a crashed process. */
+const STALE_CLAIM_MS = 2 * 60 * 1000;
 const KEY_PATTERN = /^[A-Za-z0-9_-]{16,64}$/;
 
 export interface IdempotentOutcome<M = Record<string, unknown>> {
@@ -54,6 +56,11 @@ export async function runIdempotent<M>(
     if (!isDuplicateKeyError(err)) throw err;
     const existing = await IdempotencyKeyModel.findOne(identity);
     if (!existing) throw new AppError('CONFLICT', 'Please retry the request.');
+    // A claim that never finished (process crashed mid-request) must not block the user for 24 h.
+    if (existing.status === 'in_progress' && Date.now() - existing.updatedAt.getTime() > STALE_CLAIM_MS) {
+      const released = await IdempotencyKeyModel.deleteOne({ ...identity, status: 'in_progress', updatedAt: existing.updatedAt });
+      if (released.deletedCount > 0) return runIdempotent(opts, handler);
+    }
     if (existing.requestHash !== requestHash) {
       throw new AppError('IDEMPOTENCY_KEY_REUSED', 'This Idempotency-Key was already used for a different request.');
     }

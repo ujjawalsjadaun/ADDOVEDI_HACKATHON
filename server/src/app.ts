@@ -60,6 +60,11 @@ export function createApp({ config, logger }: AppDeps) {
   );
 
   const api = express.Router();
+  // API responses can contain private data: never let browsers or proxies cache them.
+  api.use((_req, res, next) => {
+    res.setHeader('Cache-Control', 'no-store');
+    next();
+  });
   api.use(requireJson);
   api.use(express.json({ limit: '50kb' }));
   // Health stays outside authentication so it works even when the database is down.

@@ -1,5 +1,6 @@
 import type { Logger } from 'pino';
 import type { Config } from '../config/env';
+import { isDbConnected } from '../lib/db';
 import { isDuplicateKeyError } from '../lib/transaction';
 import { SYSTEM_ACTOR, recordAudit } from '../modules/audit/audit.service';
 import { alertNextBatch } from '../modules/alerts/alert.service';
@@ -13,6 +14,7 @@ import { publish, rooms } from '../realtime/emitter';
  * Each step inserts a unique row into escalationEvents; re-running is guaranteed idempotent.
  */
 export async function processEscalations(config: Config, logger: Logger): Promise<number> {
+  if (!isDbConnected()) return 0; // database outage: skip quietly, resume on reconnect
   const now = new Date();
   const requests = await BloodRequestModel.find({
     requestStatus: 'awaiting_donor',
