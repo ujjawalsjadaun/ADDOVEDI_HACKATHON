@@ -1,6 +1,9 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type {
+  AdminDonorView,
   CreateHospitalInput,
+  DonorReviewStatus,
+  DonorVerificationStatus,
   CreateUserInput,
   HospitalAdmin,
   HospitalDecisionInput,
@@ -70,5 +73,24 @@ export function useUserStatus() {
     mutationFn: async ({ id, ...input }: UserStatusInput & { id: string }) =>
       (await api<UserAdmin>(`/admin/users/${id}/status`, { method: 'POST', body: input })).data,
     onSettled: () => queryClient.invalidateQueries({ queryKey: USERS_KEY }),
+  });
+}
+
+const DONORS_KEY = ['admin', 'donors'] as const;
+
+export function useAdminDonors(filter: { verificationStatus?: DonorVerificationStatus; reviewStatus?: DonorReviewStatus; limit?: number }) {
+  return useQuery({
+    queryKey: [...DONORS_KEY, filter],
+    queryFn: () => api<AdminDonorView[]>(`/admin/donors${qs(filter)}`),
+    placeholderData: keepPreviousData,
+  });
+}
+
+export function useDonorDecision() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ userId, kind, decision, reason }: { userId: string; kind: 'verification' | 'review'; decision: string; reason: string }) =>
+      (await api<AdminDonorView>(`/admin/donors/${userId}/${kind}`, { method: 'POST', body: { decision, reason } })).data,
+    onSettled: () => queryClient.invalidateQueries({ queryKey: DONORS_KEY }),
   });
 }

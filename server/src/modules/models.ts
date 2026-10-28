@@ -6,3 +6,6 @@ import './hospitals/hospital.model';
 import './requests/request.model';
 import './idempotency/idempotency.model';
 import './public-checker/suspiciousReport.model';
+import './donors/donor.model';
+import './alerts/alert.model';
+import './assignments/assignment.model';

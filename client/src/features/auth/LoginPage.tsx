@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { Navigate, useLocation, useNavigate } from 'react-router';
+import { Link, Navigate, useLocation, useNavigate } from 'react-router';
 import { fieldError, FormError, TextField } from '../../components/ui/form';
 import { LoadingState } from '../../components/ui/states';
 import { useLogin, useMe } from './api';
@@ -52,6 +52,12 @@ export function LoginPage() {
         <button type="submit" className="btn-primary w-full" disabled={login.isPending}>
           {login.isPending ? 'Signing in…' : 'Sign in'}
         </button>
+        <p className="text-center text-sm text-slate-600">
+          Want to donate blood?{' '}
+          <Link to="/register" className="font-medium text-brand-700 underline">
+            Register as a donor
+          </Link>
+        </p>
       </form>
     </div>
   );

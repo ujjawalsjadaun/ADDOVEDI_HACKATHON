@@ -67,6 +67,9 @@ const bloodRequestSchema = new Schema(
       ),
       default: null,
     },
+    /** Donor alert batches sent so far (verification sends batch 0). */
+    alertBatches: { type: Number, default: 0 },
+    /** Last escalation-ladder step executed (Phase 10). */
     escalationStep: { type: Number, default: -1 },
     /** Optimistic concurrency: every transition matches on and increments this. */
     version: { type: Number, default: 0 },

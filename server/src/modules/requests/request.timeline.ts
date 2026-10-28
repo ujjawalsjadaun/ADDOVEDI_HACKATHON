@@ -15,6 +15,17 @@ const LABELS: Record<string, string> = {
   'request.cancelled': 'Cancelled',
   'request.fulfilled': 'Fulfilled — confirmed by the hospital',
   'request.expired': 'Expired',
+  'request.alerted': 'Donors alerted',
+  'request.no_candidates': 'No eligible donor found for this batch',
+  'request.search_widened': 'Search widened — more donors alerted',
+  'donor.accepted': 'A donor accepted',
+  'donor.declined': 'A donor declined',
+  'donor.en_route': 'Donor is on the way',
+  'donor.arrived': 'Donor reported arrival',
+  'donor.withdrawn': 'Donor withdrew',
+  'assignment.arrival_confirmed': 'Arrival confirmed by the hospital',
+  'assignment.donated': 'Donation confirmed by the hospital',
+  'assignment.no_show': 'Donor did not arrive (no-show)',
 };
 
 export async function buildTimeline(requestId: Types.ObjectId): Promise<TimelineEvent[]> {
@@ -31,9 +42,15 @@ export async function buildTimeline(requestId: Types.ObjectId): Promise<Timeline
     return {
       at: e.at.toISOString(),
       action: e.action,
-      label: LABELS[e.action] ?? e.action,
+      label: labelFor(e.action, e.detail as Record<string, unknown> | undefined),
       actor: e.actor?.type === 'system' ? { name: 'System', role: null } : { name: user?.name ?? null, role: e.actor?.role ?? null },
       reason: e.reason ?? null,
     };
   });
+}
+
+function labelFor(action: string, detail: Record<string, unknown> | undefined): string {
+  const base = LABELS[action] ?? action;
+  if (action === 'request.alerted' && typeof detail?.donors === 'number') return `${base} (${detail.donors})`;
+  return base;
 }

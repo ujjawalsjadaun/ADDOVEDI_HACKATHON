@@ -48,7 +48,7 @@ Indexes: `{ verificationStatus: 1 }`; `{ location: '2dsphere' }`.
 | `consent` | `{ contact: boolean, location: boolean, at: Date, version: string }` | both required `true` to be alerted |
 | `availability` | enum | `available` \| `unavailable` |
 | `availabilityUpdatedAt` | Date | stale after 30 days → treated as unknown (shown, not alerted) |
-| `lastDonationAt` | Date \| null | `null` + `lastDonationKnown: false` means **unknown** → manual review only |
+| `lastDonationAt` | Date \| null | `null` + `lastDonationKnown: false` = **unknown** → manual review only; `null` + `lastDonationKnown: true` = **never donated** |
 | `lastDonationKnown` | boolean | |
 | `anchorLocation` | Point | routing origin, rounded to 0.01° (~1 km) at write time; never returned in any API |
 | `anchorLabel` | string | e.g. village/locality name, shown to hospital |
@@ -83,7 +83,8 @@ Indexes: `{ userId: 1 }` unique; `{ bloodGroup: 1, availability: 1, verification
 | `duplicateReview` | `{ status: none\|pending\|distinct\|duplicate, candidates: ObjectId[], by, at, reason }` | |
 | `duplicateOfRequestId` | ObjectId? | |
 | `closure` | `{ reason, by, at, note, unitsReceived }`? | required when `closed` |
-| `escalationStep` | int | last executed ladder step |
+| `alertBatches` | int | donor alert batches sent (verification sends batch 0); contact cooldown relaxed from the second batch |
+| `escalationStep` | int | last executed escalation-ladder step (Phase 10) |
 | `verifiedAt` | Date? | ladder anchor |
 | `version` | int | optimistic concurrency; every transition increments |
 
@@ -98,8 +99,8 @@ Indexes:
 
 | Field | Type | Notes |
 | --- | --- | --- |
-| `requestId`, `donorUserId` | ObjectId | |
-| `batch` | int | escalation step that created it |
+| `requestId`, `donorUserId`, `facilityId` | ObjectId | |
+| `batch` | int | alert batch number |
 | `rank` | int | position in ranking at alert time |
 | `eta` | `{ minutes, quality, source, calculatedAt, weatherAdjustment }`? | snapshot shown to donor/hospital |
 | `channels` | `['in_app','sms']` | |
@@ -114,10 +115,11 @@ Indexes: `{ requestId: 1, donorUserId: 1 }` **unique** (a donor is alerted at mo
 
 | Field | Type | Notes |
 | --- | --- | --- |
-| `requestId`, `donorUserId`, `alertId` | ObjectId | |
+| `requestId`, `donorUserId`, `alertId`, `facilityId` | ObjectId | |
 | `slot` | int | 0-based, `< unitsRequested` |
 | `status` | enum | `accepted` \| `en_route` \| `arrived` \| `donated` \| `withdrawn` \| `no_show` \| `cancelled` |
-| `isActive` | boolean | `true` for `accepted`/`en_route`/`arrived` |
+| `isActive` | boolean | `true` for `accepted`/`en_route`/`arrived` — the donor is committed |
+| `holdsSlot` | boolean | `isActive` or `donated` — the slot is used (a donated unit keeps its slot) |
 | `acceptedAt`, `enRouteAt`, `arrivedAt`, `donatedAt`, `endedAt` | Date? | |
 | `arrivedBy` | enum? | `donor_reported` \| `hospital_confirmed` |
 | `endReason` | string? | required for withdrawn/no_show/cancelled |
@@ -125,7 +127,7 @@ Indexes: `{ requestId: 1, donorUserId: 1 }` **unique** (a donor is alerted at mo
 | `version` | int | |
 
 Indexes:
-- `{ requestId: 1, slot: 1 }` unique, partial `{ isActive: true }` → one donor per slot
+- `{ requestId: 1, slot: 1 }` unique, partial `{ holdsSlot: true }` → one donor per slot
 - `{ donorUserId: 1 }` unique, partial `{ isActive: true }` → one active assignment per donor
 - `{ requestId: 1, donorUserId: 1 }` unique → same donor cannot be assigned twice to one request
 

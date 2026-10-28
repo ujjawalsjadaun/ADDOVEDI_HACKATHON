@@ -9,6 +9,7 @@ const BUTTONS: { action: RequestAction; label: string; danger?: boolean; primary
   { action: 'verify', label: 'Verify request', primary: true },
   { action: 'review_duplicate', label: 'Resolve duplicate review', primary: true },
   { action: 'fulfill', label: 'Confirm fulfilled', primary: true },
+  { action: 'alert_next_batch', label: 'Alert more donors' },
   { action: 'reject', label: 'Reject', danger: true },
   { action: 'cancel', label: 'Cancel request', danger: true },
 ];
@@ -75,6 +76,18 @@ export function RequestActions({ request }: { request: RequestDetail }) {
           error={mutation.error}
           onCancel={close}
           onConfirm={(reason) => mutation.mutate({ action: 'cancel', body: { expectedVersion: request.version, reason } }, { onSuccess: close })}
+        />
+      )}
+      {open === 'alert_next_batch' && (
+        <ReasonForm
+          title="Alert the next donors now? The usual contact cooldown is relaxed; every other filter still applies."
+          confirmLabel="Alert more donors"
+          pending={mutation.isPending}
+          error={mutation.error}
+          onCancel={close}
+          onConfirm={(reason) =>
+            mutation.mutate({ action: 'alerts/next-batch', body: { expectedVersion: request.version, reason } }, { onSuccess: close })
+          }
         />
       )}
       {open === 'review_duplicate' && (

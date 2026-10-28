@@ -2,7 +2,7 @@
 
 Hospital-led, location-aware blood-request coordination for hill districts. Verified requests reach the most reachable compatible donors, ranked by road travel time rather than straight-line distance, with fallbacks for weak connectivity.
 
-> **Status:** Phase 4 — hospital blood-request lifecycle (create → verify → fulfil/cancel/reject) with duplicate protection, audited timeline and the public "Is this real?" checker. Donor matching and alerts are not built yet.
+> **Status:** Phase 5 — end-to-end flow: hospital raises and verifies a request → ranked donors are alerted in-app → one donor per slot accepts (race-safe) → en route / arrived → hospital confirms donation and fulfilment. Travel times are a labelled simulation; SMS is not connected yet.
 > All donor, patient and facility data in this project is synthetic. This is not an official dispatch service and makes no medical eligibility decisions.
 
 ## Stack
@@ -27,7 +27,9 @@ Auth: HttpOnly session cookie (signed JWT with server-side revocation), bcrypt p
 │  │  ├─ lib/         db, transactions, indexes, errors, http envelope, validation, logger, geo, crypto
 │  │  ├─ middleware/  request id, JSON-only, authenticate, authorize, rate limit, error handler
 │  │  ├─ modules/     one folder per feature: health, auth, users, hospitals, admin, audit,
-│  │  │               requests, idempotency, public-checker (+ models.ts registry)
+│  │  │               requests, idempotency, public-checker, donors, matching, alerts,
+│  │  │               assignments (+ models.ts registry)
+│  │  ├─ providers/   external-service adapters (routing: interface + simulated)
 │  │  ├─ scripts/     operator commands (create-admin, db:indexes)
 │  │  ├─ types/       Express type augmentation
 │  │  ├─ app.ts       Express app factory
@@ -75,8 +77,10 @@ Then run the app (below), sign in at http://localhost:5173/login, and:
 
 1. **Admin → Facilities** — add hospitals/blood banks and verify them (every decision needs a reason and is audited).
 2. **Admin → Staff accounts** — create hospital staff for a facility (tick *Can verify blood requests* for verifiers) and coordinators.
-3. Sign in as hospital staff → **New request**. A *different* verifier at the same facility then opens it and verifies it (configurable with `REQUIRE_SEPARATE_VERIFIER`).
-4. Anyone can check the request code at http://localhost:5173/check.
+3. Donors register at http://localhost:5173/register, then complete **My profile** (last donation date or "never", approximate location with consent). **Admin → Donors** verifies them.
+4. Sign in as hospital staff → **New request**. A *different* verifier at the same facility verifies it — this alerts the first batch of matching donors.
+5. Donors answer under **Alerts & donations**; the hospital follows progress on the request page and confirms arrival, donation and finally fulfilment.
+6. Anyone can check the request code at http://localhost:5173/check.
 
 Use fictional names, phone numbers and facilities only.
 
@@ -111,7 +115,13 @@ The Vite dev server proxies `/api` to the API, so the browser sees one origin an
 | `/api/admin/users` (list, create, `POST /:id/status`) | admin |
 | `POST /api/requests` (needs `Idempotency-Key`), `GET /api/requests`, `GET /api/requests/:id` | hospital staff (own facility); admin can list/read all |
 | `POST /api/requests/:id/verify` · `reject` · `duplicate-review` · `cancel` · `fulfill` | per-action rules — see `allowedActions` on each request |
+| `GET /api/requests/:id/candidates`, `POST /api/requests/:id/alerts/next-batch` | hospital staff (own facility), admin |
 | `GET /api/public/requests/:code`, `POST /api/public/reports` | anyone (rate-limited) |
+| `POST /api/auth/register-donor` | anyone (rate-limited) |
+| `/api/donors/me` (profile, availability, last-donation-unknown, alerts, assignments) | donor |
+| `POST /api/alerts/:id/respond` | donor (own alerts) |
+| `POST /api/assignments/:id/status` · `confirm-arrival` · `donated` · `no-show` | donor (own) / hospital staff (own facility) |
+| `/api/admin/donors` (list, `/:userId/verification`, `/:userId/review`) | admin |
 
 Full contracts: [docs/api-contracts.md](docs/api-contracts.md).
 
@@ -128,7 +138,9 @@ Full contracts: [docs/api-contracts.md](docs/api-contracts.md).
 
 ## Known limitations (current phase)
 
-- Donors, matching and alerts are not built yet: verifying a request makes it active but contacts nobody. Donor and Coordinator areas are placeholders; donor self-registration arrives in Phase 5.
+- Alerts are **in-app only** (donors see them when they open the app); SMS arrives in Phase 9. Travel times use a labelled **simulation** (straight line × 1.8 at 25 km/h) until real routing and weather in Phase 7.
+- Alerts are not pushed in real time; pages refresh every 15–30 s until Socket.IO (Phase 9). The escalation ladder (automatic widening at 5/10/15 min) arrives in Phase 10 — until then the hospital uses **Alert more donors**.
+- The Coordinator area is still a placeholder.
 - Requests past their deadline stay open until the expiry worker (Phase 10); verification is refused after the deadline.
 - Suspicious-request reports are stored but the admin review screen arrives in Phase 10.
 - Rate limits are kept in memory, so they reset when the API restarts and are per-process.

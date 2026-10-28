@@ -15,6 +15,10 @@ export function HomePage() {
           <h2 className="font-semibold">Got a forwarded request?</h2>
           <p className="mt-1 text-sm text-slate-600">Check whether a request code is genuine and still active.</p>
         </Link>
+        <Link to="/register" className="card block hover:border-brand-600">
+          <h2 className="font-semibold">Become a donor</h2>
+          <p className="mt-1 text-sm text-slate-600">Get alerted when a hospital near you needs your blood group.</p>
+        </Link>
         <Link to="/hospital" className="card block hover:border-brand-600">
           <h2 className="font-semibold">Hospital staff</h2>
           <p className="mt-1 text-sm text-slate-600">Raise, verify and track requests for your facility.</p>

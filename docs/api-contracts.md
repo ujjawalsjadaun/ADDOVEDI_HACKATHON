@@ -49,7 +49,7 @@ Lists add `meta.page`, `meta.limit`, `meta.total`. Query: `?page=1&limit=20` (ma
 
 **Headers**
 - `X-Request-Id` — returned on every response (generated if absent).
-- `Idempotency-Key` — **required** on `POST /requests`, `POST /family-leads`, `POST /stock-transfers`, `POST /alerts/:id/respond`; UUID v4 from the client, reused on retry.
+- `Idempotency-Key` — **required** on `POST /requests`, `POST /family-leads`, `POST /stock-transfers`; UUID v4 from the client, reused on retry. `POST /alerts/:id/respond` is naturally idempotent instead: repeating the same answer returns the original result (decision D-38).
 - Mutations of existing resources take `expectedVersion` in the body.
 
 **Auth:** session cookie `gh_session` (HttpOnly, SameSite=Lax, Secure in production). See security.md.
@@ -70,7 +70,7 @@ Role key: **PUB** public · **ADM** admin · **HS** hospital staff · **HV** hos
 | `POST /auth/login` | PUB (rate-limited) | `{ email, password }` → `{ user: SafeUser }` + cookie. Generic `401` on any failure. |
 | `POST /auth/logout` | anyone | idempotent `200 { loggedOut: true }`; clears cookie; when signed in, `tokenVersion += 1` (signs out every session of that user) |
 | `GET /auth/me` | any authed | `{ user: SafeUser, facility?: FacilitySummary }` |
-| `POST /auth/register-donor` | PUB (rate-limited) | `{ name, email, password, phone, bloodGroup, consent }` → donor account, profile `unverified` — **Phase 5** (with donor profiles) |
+| `POST /auth/register-donor` | PUB, 5/h/IP | `{ name, email, password, phone, bloodGroup, consent: { contact: true, location } }` → `201 MeResponse` and signs the donor in; profile starts `unverified` with last donation **unknown** |
 
 `SafeUser = { id, name, email, role, facilityId?, canVerifyRequests, status }`.
 
@@ -102,8 +102,8 @@ Role key: **PUB** public · **ADM** admin · **HS** hospital staff · **HV** hos
 | `POST /requests/:id/verify` | HV own facility | `{ expectedVersion, urgencyConfirmed }` → starts matching + step 0 alerts |
 | `POST /requests/:id/reject` | HV own facility, ADM | `{ expectedVersion, reason }` |
 | `POST /requests/:id/duplicate-review` | HV own facility, ADM | `{ expectedVersion, decision: distinct|duplicate, duplicateOfRequestId?, reason }` |
-| `GET /requests/:id/candidates` | HS own facility, ADM | ranked `Candidate[]` (see §3) — read-only preview |
-| `POST /requests/:id/alerts/next-batch` | HS own facility, ADM | `{ expectedVersion, reason }` — manual widen; same code path as escalation step 1 |
+| `GET /requests/:id/candidates` | HS own facility, ADM | `CandidatePreview { ranked, manualReview, alreadyAlerted, cooldownRelaxed }` (see §3) — read-only |
+| `POST /requests/:id/alerts/next-batch` | HS own facility, ADM | `{ expectedVersion, reason }` → `RequestDetail` — manual widen; same code path used after withdrawal/no-show and by escalation (Phase 10) |
 | `POST /requests/:id/fulfill` | HS own facility | `{ expectedVersion, unitsReceived, note? }` → `closed/fulfilled` |
 | `POST /requests/:id/cancel` | HS own facility, ADM | `{ expectedVersion, reason }` |
 
@@ -121,9 +121,9 @@ Implementation notes (Phase 4):
 | Method & path | Role | Notes |
 | --- | --- | --- |
 | `GET /donors/me` | DON | own profile (anchor shown as label only) |
-| `PUT /donors/me` | DON | `{ bloodGroup, lastDonationAt|null, anchor: {lat,lng,label}, consent }` — server rounds anchor |
-| `POST /donors/me/availability` | DON | `{ availability }` |
-| `POST /donors/me/consent/revoke` | DON | consent off → no alerts; active assignment unaffected |
+| `PUT /donors/me` | DON | `{ bloodGroup, lastDonationOn: "YYYY-MM-DD" | null (= never donated), anchor: {lat,lng,label} | null, consent: { contact, location } }` — server rounds anchor to ~1 km; location consent off clears it; a changed blood group resets verification |
+| `POST /donors/me/last-donation-unknown` | DON | marks last donation unknown → manual-review list only |
+| `POST /donors/me/availability` | DON | `{ availability }` — also refreshes the 30-day staleness clock |
 | `GET /donors/me/alerts?response=pending` | DON | own alerts: `{ id, publicCode, facility, bloodGroup, deadlineAt, eta, response, expiresAt }` — no patient data |
 | `GET /donors/me/assignments` | DON | own assignments; facility address + hospital registered phone revealed after accept |
 
@@ -131,10 +131,10 @@ Implementation notes (Phase 4):
 | Method & path | Role | Notes |
 | --- | --- | --- |
 | `POST /alerts/:id/respond` | DON (alert owner) | `{ decision: accept|decline }` + `Idempotency-Key` → `{ alert, assignment? }`; `409 SLOTS_FILLED` / `DONOR_BUSY` / `INVALID_TRANSITION` |
-| `POST /assignments/:id/status` | DON (owner) | `{ expectedVersion, status: en_route|arrived|withdrawn, reason? }` |
-| `POST /assignments/:id/confirm-arrival` | HS own facility | `{ expectedVersion }` |
-| `POST /assignments/:id/donated` | HS own facility | `{ expectedVersion }` |
-| `POST /assignments/:id/no-show` | HS own facility | `{ expectedVersion, reason, needStillExists: boolean }` |
+| `POST /assignments/:id/status` | DON (owner) | `{ expectedVersion, status: en_route|arrived|withdrawn, reason? }` → `DonorAssignmentView`; withdrawal (reason required) frees the slot and alerts the next batch |
+| `POST /assignments/:id/confirm-arrival` | HS own facility | `{ expectedVersion }` → `RequestDetail` |
+| `POST /assignments/:id/donated` | HS own facility | `{ expectedVersion }` → `RequestDetail`; updates the donor's last donation date; does **not** fulfil the request |
+| `POST /assignments/:id/no-show` | HS own facility | `{ expectedVersion, reason, needStillExists: boolean }` → `RequestDetail`; records a strike; frees the slot; alerts the next batch when `needStillExists` |
 
 `AssignmentForHospital = { id, slot, status, donor: { name, phoneMasked→full after accept, anchorLabel }, eta, acceptedAt, enRouteAt, arrivedAt, arrivedBy, version }`.
 
@@ -206,6 +206,8 @@ type Candidate = {
 ```
 
 Hard filters (never relaxed automatically): consent contact + location, profile verified, `reviewStatus = ok`, account `active`, availability `available` and fresh, blood group rule, rest period ≥ `DONATION_REST_DAYS`, no active assignment, not alerted for this request already, not alerted within `CONTACT_COOLDOWN_HOURS` (cooldown relaxes at escalation step 1+, documented). Donors with unknown last donation appear in a separate "manual review" list.
+
+Exact candidate pool: the 25 nearest eligible donors (straight line) get a routing call. ETA is `simulated` until Phase 7 and always labelled.
 
 Ranking (stable): `beforeDeadline` desc → ETA quality (`live`/`cached`/`simulated` before `rough_estimate` before unknown) → effective minutes asc → `lastAlertedAt` asc (fairness) → `donorUserId` asc (tie-break).
 

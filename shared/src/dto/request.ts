@@ -8,9 +8,10 @@ import type {
   Urgency,
 } from '../enums';
 import type { FacilitySummary } from './auth';
+import type { AlertSummary, AssignmentForHospital } from './donor';
 
 /** Actions the current user may take right now; computed by the server, re-checked on every call. */
-export type RequestAction = 'verify' | 'reject' | 'review_duplicate' | 'cancel' | 'fulfill';
+export type RequestAction = 'verify' | 'reject' | 'review_duplicate' | 'cancel' | 'fulfill' | 'alert_next_batch';
 
 export interface RequestSummary {
   id: string;
@@ -67,6 +68,8 @@ export interface RequestDetail extends RequestSummary {
   verifiedAt: string | null;
   timeline: TimelineEvent[];
   allowedActions: RequestAction[];
+  assignments: AssignmentForHospital[];
+  alertSummary: AlertSummary;
 }
 
 export interface CreateRequestResult {

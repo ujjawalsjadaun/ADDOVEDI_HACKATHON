@@ -4,6 +4,7 @@ import {
   duplicateReviewSchema,
   fulfillRequestSchema,
   listRequestsQuerySchema,
+  nextBatchSchema,
   reasonedTransitionSchema,
   verifyRequestSchema,
   type CreateRequestResult,
@@ -15,9 +16,11 @@ import { actionContext, currentUser, requireRole } from '../../middleware/author
 import { createRateLimiter } from '../../middleware/rateLimit';
 import { requireIdempotencyKey, runIdempotent } from '../idempotency/idempotency.service';
 import {
+  alertMoreDonors,
   cancelRequest,
   createRequest,
   fulfillRequest,
+  getCandidatePreview,
   getRequestDetail,
   listRequests,
   rejectRequest,
@@ -80,6 +83,15 @@ export function requestRoutes(config: Config): Router {
   router.post('/:id/fulfill', async (req, res) => {
     const input = parse(fulfillRequestSchema, req.body);
     sendData(res, await fulfillRequest(parseId(req.params.id), input, actionContext(res), config));
+  });
+
+  router.get('/:id/candidates', async (req, res) => {
+    sendData(res, await getCandidatePreview(parseId(req.params.id), currentUser(res), config));
+  });
+
+  router.post('/:id/alerts/next-batch', async (req, res) => {
+    const input = parse(nextBatchSchema, req.body);
+    sendData(res, await alertMoreDonors(parseId(req.params.id), input, actionContext(res), config));
   });
 
   return router;

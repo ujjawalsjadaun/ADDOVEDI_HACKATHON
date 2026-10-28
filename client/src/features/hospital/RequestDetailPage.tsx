@@ -3,6 +3,8 @@ import { ErrorState, LoadingState } from '../../components/ui/states';
 import { StatusBadge } from '../../components/ui/StatusBadge';
 import { formatDateTime, relativeTime } from '../../lib/format';
 import { useRequest } from './api';
+import { AssignmentsPanel } from './components/AssignmentsPanel';
+import { CandidatesPanel } from './components/CandidatesPanel';
 import { RequestActions } from './components/RequestActions';
 import { Timeline } from './components/Timeline';
 import { requestState, URGENCY_LABEL, URGENCY_TONE } from './labels';
@@ -103,6 +105,10 @@ export function RequestDetailPage() {
       )}
 
       <RequestActions request={r} />
+
+      <AssignmentsPanel request={r} />
+
+      <CandidatesPanel request={r} />
 
       <section className="card">
         <h3 className="mb-3 font-semibold">Timeline</h3>

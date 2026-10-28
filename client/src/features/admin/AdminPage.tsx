@@ -3,6 +3,7 @@ import { NavLink, Outlet } from 'react-router';
 const TABS = [
   { to: 'hospitals', label: 'Facilities' },
   { to: 'users', label: 'Staff accounts' },
+  { to: 'donors', label: 'Donors' },
 ];
 
 /** Admin area shell; panels render in the outlet. */

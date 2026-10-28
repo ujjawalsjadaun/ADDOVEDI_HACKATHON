@@ -41,6 +41,15 @@ Each entry: decision, why, and whether it needs review by a domain partner befor
 | D-32 | 2026-10-29 | Until the expiry worker (Phase 10), a request past its deadline stays open; the UI shows "x ago" and verification is refused after the deadline. Public `under_review` is not yet emitted (admin flagging is Phase 10). | Honest interim behaviour. | — |
 | D-33 | 2026-10-29 | Public checker treats malformed and unknown codes identically (`200 { status: 'not_found' }`), accepts Crockford-ambiguous input (O→0, I/L→1, optional `GH`/dashes), and suspicious reports are accepted whether or not the code exists. | No enumeration signal; forgiving for people re-typing SMS codes. | — |
 
+| D-34 | 2026-10-29 | The routing adapter boundary and its labelled `simulated` provider ship in Phase 5 (not 7) so ranking uses road-style ETA from the start. Only the 25 nearest eligible donors (straight line) get a routing call. Weather shows `unavailable` until Phase 7. | Ranking by reachability is the core promise; provider stays swappable. | — |
+| D-35 | 2026-10-29 | Assignments carry `isActive` (donor committed) and `holdsSlot` (slot used, including after donation) with separate partial unique indexes. | A donated unit must keep its slot while the donor becomes free again. | — |
+| D-36 | 2026-10-29 | "Never donated" and "don't know" are distinct: never → eligible; unknown → manual-review list only. New donors start as unknown until they fill in their profile. | Never assume eligibility (D-09) without blocking first-time donors. | **Clinical review** |
+| D-37 | 2026-10-29 | Alerts past their response window are treated as expired whenever read; a worker will persist it in Phase 10. Contact cooldown is relaxed from the second batch on; no other filter is ever relaxed automatically. | Correct behaviour without a worker; pitch escalation semantics. | — |
+| D-38 | 2026-10-29 | Alert responses are naturally idempotent (same answer → same result) rather than requiring an `Idempotency-Key`. | Works for double taps now and SMS replies later, without client key handling. | — |
+| D-39 | 2026-10-29 | After a withdrawal or a no-show with "still needed", the next batch is alerted best-effort after the status change commits; on failure the hospital can use "Alert more donors". | The status change must never be lost because matching failed. | — |
+| D-40 | 2026-10-29 | Donor's phone is shown to the hospital only on assignments (after acceptance); the hospital's phone and map location are shown to the donor only after they accept. A donor sees their own rounded location; nobody else ever does. | Data minimisation (security.md §5). | — |
+| D-41 | 2026-10-29 | Changing blood group resets donor verification; turning off location consent deletes the stored location. | Blood group is the matching key; consent must be honoured, not just flagged. | — |
+
 ## Open questions (non-blocking; defaults above apply)
 
 1. Should a hospital be able to confirm fulfillment with fewer units than requested (partial)? Default: yes, `unitsReceived` recorded.

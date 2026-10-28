@@ -14,6 +14,7 @@ export const ACTION_FROM: Record<RequestAction, readonly RequestStatus[]> = {
   review_duplicate: ['open'],
   cancel: ['open', 'awaiting_donor', 'donors_assigned'],
   fulfill: ['awaiting_donor', 'donors_assigned'],
+  alert_next_batch: ['awaiting_donor'],
 };
 
 const ALL_ACTIONS = Object.keys(ACTION_FROM) as RequestAction[];
@@ -88,6 +89,9 @@ export function assertCanAct(action: RequestAction, s: ActionSubject): void {
       return;
     case 'cancel':
       if (!isAdmin && !sameFacility(s)) throw forbidden('Only staff of this facility or an administrator can cancel this request.');
+      return;
+    case 'alert_next_batch':
+      if (!isAdmin && !sameFacility(s)) throw forbidden('Only staff of this facility or an administrator can alert more donors.');
       return;
     case 'fulfill':
       // Fulfilment is a hospital fact; administrators cannot confirm it (docs/security.md §1).

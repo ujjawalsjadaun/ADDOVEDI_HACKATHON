@@ -135,7 +135,7 @@ stateDiagram-v2
 | Status | Active? | Notes |
 | --- | --- | --- |
 | `accepted`, `en_route`, `arrived` | yes | Occupies a slot. A donor can have at most **one** active assignment overall. |
-| `donated` | no | Hospital confirmed this donor donated. Updates donor `lastDonationAt`. Does **not** fulfil the request. |
+| `donated` | no | Hospital confirmed this donor donated. Updates donor `lastDonationAt`. Keeps its slot (the unit was given) but frees the donor. Does **not** fulfil the request. |
 | `withdrawn`, `no_show`, `cancelled` | no | Frees the slot. `no_show` requires a reason and records a strike (see security.md §6). |
 
 `arrivedBy` records whether arrival was `donor_reported` or `hospital_confirmed`.

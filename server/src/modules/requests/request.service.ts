@@ -10,6 +10,7 @@ import {
   type RequestAction,
   type RequestDetail,
   type RequestSummary,
+  type CandidatePreview,
   type VerifyRequestInput,
 } from '@golden-hour/shared';
 import { Types } from 'mongoose';
@@ -19,6 +20,9 @@ import { AppError } from '../../lib/errors';
 import { generatePublicCode } from '../../lib/ids';
 import { isDuplicateKeyError, withTransaction } from '../../lib/transaction';
 import { recordAudit, userActor } from '../audit/audit.service';
+import { alertNextBatch, insertAlertBatch, matchFirstBatch, summariseAlerts } from '../alerts/alert.service';
+import { endForClosedRequest, listForHospital } from '../assignments/assignment.service';
+import { matchDonors, toCandidatePreview } from '../matching/matching.service';
 import { assertFacilityScope } from '../auth/auth.policy';
 import type { ActionContext, AuthUser } from '../auth/auth.types';
 import { HospitalModel, type HospitalDocument } from '../hospitals/hospital.model';
@@ -94,12 +98,14 @@ export async function buildDetail(
   user: AuthUser,
   config: Config,
 ): Promise<RequestDetail> {
-  const [candidates, timeline, names] = await Promise.all([
+  const [candidates, timeline, names, assignments, alertSummary] = await Promise.all([
     request.duplicateReview.candidates.length
       ? BloodRequestModel.find({ _id: { $in: request.duplicateReview.candidates } })
       : Promise.resolve([] as BloodRequestDocument[]),
     buildTimeline(request._id),
     userNames([request.createdBy, request.verification?.by, request.duplicateReview.by, request.closure?.by]),
+    listForHospital(request._id, user),
+    summariseAlerts(request._id),
   ]);
   return toRequestDetail(request, {
     facility,
@@ -107,6 +113,8 @@ export async function buildDetail(
     candidates,
     timeline,
     allowedActions: allowedActions({ request, facility, user, config }),
+    assignments,
+    alertSummary,
   });
 }
 
@@ -266,6 +274,9 @@ export async function verifyRequest(id: string, input: VerifyRequestInput, ctx: 
     throw new AppError('DUPLICATE_REVIEW_PENDING', 'A similar request arrived since this one was raised. Review it before verifying.');
   }
 
+  // Rank donors before the transaction (routing calls are slow); the batch is inserted inside it.
+  const firstBatch = await matchFirstBatch(request, facility, config);
+
   const updated = await withTransaction(async (session) => {
     const now = new Date();
     const doc = await applyTransition(session, {
@@ -278,8 +289,8 @@ export async function verifyRequest(id: string, input: VerifyRequestInput, ctx: 
           verification: { by: new Types.ObjectId(ctx.user.id), at: now, reason: null },
           verifiedAt: now,
           urgencyConfirmed: input.urgencyConfirmed,
-          // Phase 5 queues the first donor alert batch in this same transaction.
           requestStatus: 'awaiting_donor',
+          alertBatches: 1,
         },
       },
     });
@@ -290,6 +301,8 @@ export async function verifyRequest(id: string, input: VerifyRequestInput, ctx: 
       }),
       session,
     );
+    // No donor is contacted before this point (docs/state-machines.md §2).
+    await insertAlertBatch(session, { request: doc, candidates: firstBatch.ranked, batch: 0, actor: userActor(ctx.user), requestId: ctx.requestId, config });
     return doc;
   });
   return buildDetail(updated, facility, ctx.user, config);
@@ -388,7 +401,7 @@ export async function cancelRequest(id: string, input: ReasonedTransitionInput, 
       action: 'cancel',
       update: { $set: closeUpdate('cancelled', ctx, { note: input.reason }) },
     });
-    // Phase 5: cancel pending alerts and active assignments here, in the same transaction.
+    await endForClosedRequest(session, doc._id, 'request cancelled by the hospital');
     await recordAudit(
       audit(ctx, doc, 'request.cancelled', { reason: input.reason, changes: { requestStatus: [request.requestStatus, 'closed'] } }),
       session,
@@ -412,7 +425,8 @@ export async function fulfillRequest(id: string, input: FulfillRequestInput, ctx
       action: 'fulfill',
       update: { $set: closeUpdate('fulfilled', ctx, { note: input.note, unitsReceived: input.unitsReceived }) },
     });
-    // Phase 5: cancel pending alerts and notify assigned donors here, in the same transaction.
+    // Donors still on their way are released; donations already made stay recorded.
+    await endForClosedRequest(session, doc._id, 'request fulfilled — no longer needed');
     await recordAudit(
       audit(ctx, doc, 'request.fulfilled', {
         changes: { requestStatus: [request.requestStatus, 'closed'] },
@@ -423,4 +437,31 @@ export async function fulfillRequest(id: string, input: FulfillRequestInput, ctx
     return doc;
   });
   return buildDetail(updated, facility, ctx.user, config);
+}
+
+// ── matching preview ─────────────────────────────────────────────────────────
+
+/** Ranked donors the next batch would alert, plus the manual-review list. Read-only. */
+export async function getCandidatePreview(id: string, user: AuthUser, config: Config): Promise<CandidatePreview> {
+  const { request, facility } = await loadScoped(id, user);
+  if (request.requestStatus === 'closed') throw new AppError('INVALID_TRANSITION', 'This request is closed.');
+  return toCandidatePreview(await matchDonors(request, facility, config, { escalationStep: request.alertBatches }));
+}
+
+/** Hospital "alert more donors": next batch with the contact cooldown relaxed, reason audited. */
+export async function alertMoreDonors(
+  id: string,
+  input: { expectedVersion: number; reason: string },
+  ctx: ActionContext,
+  config: Config,
+): Promise<RequestDetail> {
+  await prepare(id, 'alert_next_batch', ctx, config);
+  const { request } = await alertNextBatch(id, {
+    actor: userActor(ctx.user),
+    config,
+    expectedVersion: input.expectedVersion,
+    reason: input.reason,
+    httpRequestId: ctx.requestId,
+  });
+  return buildDetail(request, await loadFacility(request.facilityId), ctx.user, config);
 }

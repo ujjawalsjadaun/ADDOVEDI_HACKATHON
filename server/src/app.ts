@@ -15,6 +15,9 @@ import { publicHospitalRoutes } from './modules/hospitals/hospital.routes';
 import { adminRoutes } from './modules/admin/admin.routes';
 import { requestRoutes } from './modules/requests/request.routes';
 import { publicCheckerRoutes } from './modules/public-checker/checker.routes';
+import { donorRoutes } from './modules/donors/donor.routes';
+import { alertRoutes } from './modules/alerts/alert.routes';
+import { assignmentRoutes } from './modules/assignments/assignment.routes';
 
 export interface AppDeps {
   config: Config;
@@ -62,6 +65,9 @@ export function createApp({ config, logger }: AppDeps) {
   api.use('/admin', adminRoutes());
   api.use('/requests', requestRoutes(config));
   api.use('/public', publicCheckerRoutes(config));
+  api.use('/donors', donorRoutes(config));
+  api.use('/alerts', alertRoutes());
+  api.use('/assignments', assignmentRoutes(config, logger));
   api.use(notFound);
 
   app.use('/api', api);

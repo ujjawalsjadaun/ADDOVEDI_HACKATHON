@@ -1,4 +1,13 @@
-import type { DuplicateCandidate, PublicRequestStatus, RequestAction, RequestDetail, RequestSummary, TimelineEvent } from '@golden-hour/shared';
+import type {
+  AlertSummary,
+  AssignmentForHospital,
+  DuplicateCandidate,
+  PublicRequestStatus,
+  RequestAction,
+  RequestDetail,
+  RequestSummary,
+  TimelineEvent,
+} from '@golden-hour/shared';
 import { toFacilitySummary } from '../auth/auth.dto';
 import type { HospitalDocument } from '../hospitals/hospital.model';
 import type { BloodRequestDocument } from './request.model';
@@ -48,6 +57,8 @@ export function toRequestDetail(
     candidates: BloodRequestDocument[];
     timeline: TimelineEvent[];
     allowedActions: RequestAction[];
+    assignments: AssignmentForHospital[];
+    alertSummary: AlertSummary;
   },
 ): RequestDetail {
   const name = (id: unknown) => (id ? (extra.names.get(String(id)) ?? null) : null);
@@ -80,6 +91,8 @@ export function toRequestDetail(
     verifiedAt: iso(doc.verifiedAt),
     timeline: extra.timeline,
     allowedActions: extra.allowedActions,
+    assignments: extra.assignments,
+    alertSummary: extra.alertSummary,
   };
 }
 

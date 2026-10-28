@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { loginSchema, type MeResponse } from '@golden-hour/shared';
+import { loginSchema, registerDonorSchema, type MeResponse } from '@golden-hour/shared';
 import type { Logger } from 'pino';
 import type { Config } from '../../config/env';
 import { hmacHex } from '../../lib/crypto';
@@ -10,12 +10,22 @@ import { currentUser, requireAuth } from '../../middleware/authorize';
 import { createRateLimiter } from '../../middleware/rateLimit';
 import { recordAudit, SYSTEM_ACTOR, userActor } from '../audit/audit.service';
 import { toSafeUser } from './auth.dto';
+import { registerDonor } from '../donors/donor.service';
 import { checkCredentials, getFacilitySummary, recordLogin, revokeSessions } from './auth.service';
 import { clearSessionCookieOptions, SESSION_COOKIE, sessionCookieOptions, signSession } from './session';
 
 export function authRoutes(config: Config, logger: Logger): Router {
   const router = Router();
   const loginLimiter = createRateLimiter({ windowMs: 15 * 60_000, limit: 10, keyBy: 'ip+email' });
+  const registerLimiter = createRateLimiter({ windowMs: 60 * 60_000, limit: 5, keyBy: 'ip' });
+
+  // Public donor sign-up; signs the new donor in. Staff and admins are provisioned, never self-registered.
+  router.post('/register-donor', registerLimiter, async (req, res) => {
+    const input = parse(registerDonorSchema, req.body);
+    const user = await registerDonor(input, res.locals.requestId);
+    res.cookie(SESSION_COOKIE, signSession(user, config), sessionCookieOptions(config));
+    sendData<MeResponse>(res, { user: toSafeUser(user), facility: null }, { status: 201 });
+  });
 
   router.post('/login', loginLimiter, async (req, res) => {
     const input = parse(loginSchema, req.body);
