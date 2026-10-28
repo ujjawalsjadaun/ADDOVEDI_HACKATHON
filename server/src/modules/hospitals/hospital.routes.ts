@@ -17,6 +17,8 @@ import {
   listVerifiedHospitals,
   setAccessPoint,
 } from './hospital.service';
+import { publish, rooms } from '../../realtime/emitter';
+
 
 /** /api/hospitals — public list of verified facilities, plus the staff-only access-point update. */
 export function publicHospitalRoutes(): Router {
@@ -28,7 +30,9 @@ export function publicHospitalRoutes(): Router {
 
   router.post('/:id/access-point', requireRole('hospital_staff', 'coordinator', 'admin'), async (req, res) => {
     const input = parse(accessPointSchema, req.body);
-    await setAccessPoint(parseId(req.params.id), input, actionContext(res));
+    const id = parseId(req.params.id);
+    await setAccessPoint(id, input, actionContext(res));
+    publish('map', [rooms.role('coordinator'), rooms.role('admin'), rooms.role('hospital_staff')], id);
     sendData(res, { updated: true });
   });
   return router;

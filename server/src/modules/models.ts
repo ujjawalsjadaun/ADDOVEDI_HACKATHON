@@ -13,4 +13,6 @@ import './roads/roadReport.model';
 import './leads/familyLead.model';
 import './transport/transportTask.model';
 import './transfers/stockTransfer.model';
+import './notifications/outbox.model';
+import '../providers/sms/simulatedSms.model';
 import '../providers/routing/routeCache.model';

@@ -20,9 +20,9 @@ Repository is greenfield as of Phase 0, so every item starts as *missing*.
 | M10 | Duplicate protection: idempotency, one active request per patient, similarity flag, human review | P | Must | 4 | implemented (Phase 4) |
 | M11 | Audit events for critical/admin actions | P | Must | 4–10 | partial — auth, facility and account decisions audited |
 | M12 | Dashboards for hospital, donor, admin/coordinator | R | Must | 6 | implemented (Phase 6) — hospital dashboard, donor home, admin overview/requests/audit/reports, coordinator list; freshness indicators |
-| M13 | Manual fallback when route/weather/SMS provider is down | P | Must | 7, 9 | partial — routing/weather fall back to labelled unknown/rough; SMS fallback in Phase 9 |
+| M13 | Manual fallback when route/weather/SMS provider is down | P | Must | 7, 9 | implemented — routing/weather labelled fallbacks; SMS failures visible + retry; in-app alerts always available |
 | M14 | Synthetic seed data and automated happy-path/failure tests | R | Must | 2–11 | descoped by user (D-26): no tests or demo scripts |
-| M15 | "Demo/simulated" labels on simulated provider results | R | Must | 7, 9, 12 | partial — ETA quality, weather and provider labels everywhere; SMS in Phase 9 |
+| M15 | "Demo/simulated" labels on simulated provider results | R | Must | 7, 9, 12 | implemented — ETA, weather, provider and simulated-SMS labels |
 
 ## Should Have
 
@@ -32,13 +32,13 @@ Repository is greenfield as of Phase 0, so every item starts as *missing*.
 | S2 | Road ETA with timeout, cache, freshness label; labelled straight-line fallback | P | 7 | implemented (Phase 7) — ORS optional, cache with age, labelled fallback |
 | S3 | Rain/weather delay as configurable band | P | 7 | implemented (Phase 7) — Open-Meteo or simulated, 3 bands |
 | S4 | Configurable escalation ladder (0 / 5 / 10 / 15 min) | P | 10 | missing |
-| S5 | SMS adapter with test mode and delivery-state tracking | P | 9 | missing |
+| S5 | SMS adapter with test mode and delivery-state tracking | P | 9 | implemented (Phase 9) — simulated provider, outbox, retries, honest statuses |
 | S6 | Hospital ↔ hospital / blood-bank stock request and transfer timeline | P | 8 | implemented (Phase 8) — request → offer → dispatch → received; no inventory feed |
 | S7 | Road closure reports with author, time, confidence, expiry, verification | P | 7 | implemented (Phase 7) |
 | S8 | Family lead stays pending until hospital confirms | P | 8 | implemented (Phase 8) |
 | S9 | No-show/decline → next-best donor; strike/review | P | 5, 10 | implemented (Phase 5) — next batch after decline/withdraw/no-show; 3 strikes → admin review |
 | S10 | Demo scenario reset (dev/demo only) | R | 12 | descoped by user (no demo scripts) |
-| S11 | Provider/queue health view | R | 9–10 | partial — admin overview (Phase 6); provider/queue health in Phase 9 |
+| S11 | Provider/queue health view | R | 9–10 | implemented (Phase 9) — admin overview + notification queue health |
 
 ## Abuse controls (pitch-confirmed)
 
@@ -54,7 +54,7 @@ Repository is greenfield as of Phase 0, so every item starts as *missing*.
 
 | ID | Requirement | Src | Status |
 | --- | --- | --- | --- |
-| C1 | Inbound YES/NO SMS webhook | P | deferred |
+| C1 | Inbound YES/NO SMS webhook | P | deferred — alerts carry a responseToken for it; needs a real provider (D-60) |
 | C2 | Missed-call availability | R | deferred |
 | C3 | Multilingual SMS (verified translations only) | P (future) | deferred |
 | C4 | Relay transport with multi-leg handover | P (future) | partial — single-leg transport tasks with handover + receipt (Phase 8); multi-leg deferred |

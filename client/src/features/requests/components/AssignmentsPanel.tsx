@@ -23,7 +23,9 @@ export function AssignmentsPanel({ request }: { request: RequestDetail }) {
           Alerts sent: {s.total} · waiting {s.pending} · accepted {s.accepted} · declined {s.declined} · expired {s.expired}
           {s.cancelled > 0 && ` · no longer needed ${s.cancelled}`}
           {s.lastBatchAt && ` · last batch ${formatDateTime(s.lastBatchAt)}`}
-          <span className="block text-xs text-slate-500">In-app alerts only — SMS delivery is not connected yet.</span>
+          <span className="block text-xs text-slate-500">
+            SMS copies: {smsSummary(s.sms)}. “Sent” means the SMS provider accepted it — not that the donor has read it.
+          </span>
         </p>
       ) : (
         <p className="text-sm text-slate-600">
@@ -125,4 +127,20 @@ function AssignmentRow({ requestId, assignment: a }: { requestId: string; assign
       )}
     </li>
   );
+}
+
+function smsSummary(sms: Partial<Record<string, number>>): string {
+  const parts = (
+    [
+      ['pending', 'queued'],
+      ['sending', 'sending'],
+      ['sent', 'sent'],
+      ['delivered', 'delivered'],
+      ['failed', 'failed'],
+      ['unknown', 'unknown'],
+    ] as const
+  )
+    .filter(([k]) => (sms[k] ?? 0) > 0)
+    .map(([k, label]) => `${sms[k]} ${label}`);
+  return parts.length ? parts.join(' · ') : 'none queued';
 }

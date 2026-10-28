@@ -8,6 +8,7 @@ import { parse, parseId } from '../../lib/validation';
 import { actionContext, requireRole } from '../../middleware/authorize';
 import { SYSTEM_ACTOR } from '../audit/audit.service';
 import { alertNextBatch } from '../alerts/alert.service';
+import { publish, rooms } from '../../realtime/emitter';
 import { getRequestDetail } from '../requests/request.service';
 import { confirmArrival, markDonated, markNoShow, updateDonorAssignment } from './assignment.service';
 
@@ -21,7 +22,9 @@ export function assignmentRoutes(config: Config, logger: Logger): Router {
    */
   async function refillSlot(requestId: Types.ObjectId, httpRequestId: string) {
     try {
-      await alertNextBatch(requestId, { actor: SYSTEM_ACTOR, config, httpRequestId });
+      const { request, alertedDonorIds } = await alertNextBatch(requestId, { actor: SYSTEM_ACTOR, config, httpRequestId });
+      publish('request', [rooms.facility(request.facilityId), rooms.role('admin')], request._id);
+      publish('alert', alertedDonorIds.map((id) => rooms.user(id)), request._id);
     } catch (err) {
       logger.warn({ err, requestId: requestId.toString() }, 'next alert batch after released slot failed');
     }

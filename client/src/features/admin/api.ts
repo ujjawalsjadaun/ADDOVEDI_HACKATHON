@@ -3,6 +3,9 @@ import type {
   AdminDonorView,
   AdminOverview,
   AuditEntryView,
+  NotificationQueueHealth,
+  NotificationStatus,
+  NotificationView,
   RequestSummary,
   SuspiciousReportView,
   CreateHospitalInput,
@@ -147,5 +150,34 @@ export function useReviewReport() {
       void queryClient.invalidateQueries({ queryKey: REPORTS_KEY });
       void queryClient.invalidateQueries({ queryKey: ['admin', 'overview'] });
     },
+  });
+}
+
+// ── notifications (outbox) ───────────────────────────────────────────────────
+
+const NOTIFICATIONS_KEY = ['admin', 'notifications'] as const;
+
+export function useNotifications(status: NotificationStatus | undefined) {
+  return useQuery({
+    queryKey: [...NOTIFICATIONS_KEY, 'list', status],
+    queryFn: () => api<NotificationView[]>(`/admin/notifications${toQueryString({ status, limit: 50 })}`),
+    placeholderData: keepPreviousData,
+    refetchInterval: 30_000,
+  });
+}
+
+export function useNotificationHealth() {
+  return useQuery({
+    queryKey: [...NOTIFICATIONS_KEY, 'health'],
+    queryFn: async () => (await api<NotificationQueueHealth>('/admin/notifications/health')).data,
+    refetchInterval: 30_000,
+  });
+}
+
+export function useRetryNotification() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason: string }) => api(`/admin/notifications/${id}/retry`, { method: 'POST', body: { reason } }),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: NOTIFICATIONS_KEY }),
   });
 }

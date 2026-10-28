@@ -9,6 +9,7 @@ const TABS = [
   { to: '/admin/users', label: 'Staff accounts' },
   { to: '/admin/donors', label: 'Donors' },
   { to: '/admin/reports', label: 'Reports' },
+  { to: '/admin/notifications', label: 'Notifications' },
   { to: '/admin/audit', label: 'Audit log' },
 ];
 

@@ -10,6 +10,7 @@ import { toFacilitySummary } from '../auth/auth.dto';
 import type { AuthUser } from '../auth/auth.types';
 import { DonorProfileModel } from '../donors/donor.model';
 import { HospitalModel } from '../hospitals/hospital.model';
+import { OutboxModel } from '../notifications/outbox.model';
 import { SuspiciousReportModel } from '../public-checker/suspiciousReport.model';
 import { toRequestSummary } from '../requests/request.dto';
 import { BloodRequestModel, type BloodRequestDocument } from '../requests/request.model';
@@ -98,7 +99,7 @@ export async function getAdminOverview(config: Config): Promise<AdminOverview> {
   const now = new Date();
   const overdueBefore = new Date(now.getTime() - config.VERIFICATION_DEADLINE_MIN * 60_000);
 
-  const [pendingFacilities, unverifiedDonors, donorsUnderReview, activeRequests, openReports, failedLogins, overdue, awaiting] = await Promise.all([
+  const [pendingFacilities, unverifiedDonors, donorsUnderReview, activeRequests, openReports, failedLogins, overdue, awaiting, smsPending, smsFailed] = await Promise.all([
     HospitalModel.countDocuments({ verificationStatus: 'pending' }),
     DonorProfileModel.countDocuments({ verificationStatus: 'unverified' }),
     DonorProfileModel.countDocuments({ reviewStatus: 'under_review' }),
@@ -107,6 +108,8 @@ export async function getAdminOverview(config: Config): Promise<AdminOverview> {
     AuditLog.countDocuments({ action: 'auth.login_failed', at: { $gte: new Date(now.getTime() - 24 * HOUR_MS) } }),
     BloodRequestModel.find({ requestStatus: 'open', verificationStatus: 'pending', createdAt: { $lte: overdueBefore } }).sort({ createdAt: 1 }).limit(20),
     BloodRequestModel.find({ requestStatus: 'awaiting_donor', slotsFilled: 0 }).sort({ deadlineAt: 1 }).limit(100),
+    OutboxModel.countDocuments({ status: { $in: ['pending', 'sending'] } }),
+    OutboxModel.countDocuments({ status: 'failed' }),
   ]);
 
   // "Without responders": nobody is currently considering it (no pending alert) and nobody accepted.
@@ -138,6 +141,8 @@ export async function getAdminOverview(config: Config): Promise<AdminOverview> {
       requestsWithoutResponders: stuck.length,
       openSuspiciousReports: openReports,
       failedLogins24h: failedLogins,
+      notificationsPending: smsPending,
+      notificationsFailed: smsFailed,
     },
     overdueVerifications: overdue.map((r) => ({
       id: r._id.toString(),

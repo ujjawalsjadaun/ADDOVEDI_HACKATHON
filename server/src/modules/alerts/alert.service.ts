@@ -11,12 +11,16 @@ import { HospitalModel, type HospitalDocument } from '../hospitals/hospital.mode
 import { matchDonors, type MatchResult, type RankedCandidate } from '../matching/matching.service';
 import { BloodRequestModel, type BloodRequestDocument } from '../requests/request.model';
 import { applyTransition } from '../requests/request.transitions';
+import { enqueueNotification, smsCountsForRequest } from '../notifications/outbox.service';
+import { publish, rooms } from '../../realtime/emitter';
+import { formatDeadline } from '../notifications/templates';
 import { effectiveResponse, toDonorAlertView } from './alert.dto';
 import { RequestAlertModel } from './alert.model';
 
 /**
  * Inserts the next alert batch inside the caller's transaction and records it on the request
- * timeline. In-app alerts are `delivered` once written; SMS delivery is tracked separately (Phase 9).
+ * timeline. In-app alerts are `delivered` once written; an SMS copy is queued in the outbox in the same
+ * transaction and its delivery is tracked separately. Returns the alerted donors' user ids.
  */
 export async function insertAlertBatch(
   session: ClientSession,
@@ -28,7 +32,7 @@ export async function insertAlertBatch(
     requestId?: string;
     config: Config;
   },
-): Promise<number> {
+): Promise<string[]> {
   const { request, config } = args;
   const chosen = args.candidates.slice(0, config.ALERT_BATCH_SIZE);
   const now = new Date();
@@ -46,10 +50,11 @@ export async function insertAlertBatch(
       },
       session,
     );
-    return 0;
+    return [];
   }
 
-  await RequestAlertModel.insertMany(
+  const facility = await HospitalModel.findById(request.facilityId).session(session);
+  const created = await RequestAlertModel.insertMany(
     chosen.map((c) => ({
       requestId: request._id,
       facilityId: request.facilityId,
@@ -57,7 +62,7 @@ export async function insertAlertBatch(
       batch: args.batch,
       rank: c.rank,
       eta: c.eta,
-      channels: ['in_app'],
+      channels: ['in_app', 'sms'],
       deliveryStatus: 'delivered',
       response: 'pending',
       expiresAt: new Date(now.getTime() + config.ALERT_RESPONSE_WINDOW_MIN * 60_000),
@@ -66,6 +71,23 @@ export async function insertAlertBatch(
     { session },
   );
   await DonorProfileModel.updateMany({ _id: { $in: chosen.map((c) => c.profileId) } }, { $set: { lastAlertedAt: now } }, { session });
+  for (const alert of created) {
+    await enqueueNotification(session, {
+      eventId: `alert:${alert._id.toString()}:sms`,
+      type: 'donor_alert',
+      recipientUserId: alert.donorUserId,
+      requestId: request._id,
+      vars: {
+        publicCode: request.publicCode,
+        facilityName: facility?.name ?? 'A hospital',
+        district: facility?.district ?? '',
+        bloodGroup: request.bloodGroup,
+        deadlineText: formatDeadline(request.deadlineAt),
+        checkUrl: `${config.PUBLIC_APP_URL}/check/${request.publicCode}`,
+        appUrl: config.PUBLIC_APP_URL,
+      },
+    });
+  }
   await recordAudit(
     {
       actor: args.actor,
@@ -78,7 +100,7 @@ export async function insertAlertBatch(
     },
     session,
   );
-  return chosen.length;
+  return chosen.map((c) => c.donorUserId);
 }
 
 /**
@@ -89,7 +111,7 @@ export async function insertAlertBatch(
 export async function alertNextBatch(
   requestId: string | Types.ObjectId,
   opts: { actor: AuditActor; config: Config; expectedVersion?: number; reason?: string; httpRequestId?: string },
-): Promise<{ alerted: number; request: BloodRequestDocument }> {
+): Promise<{ alertedDonorIds: string[]; request: BloodRequestDocument }> {
   const request = await BloodRequestModel.findById(requestId);
   if (!request) throw new AppError('NOT_FOUND', 'Not found.');
   if (request.requestStatus !== 'awaiting_donor') {
@@ -108,7 +130,7 @@ export async function alertNextBatch(
       action: 'alert_next_batch',
       update: { $inc: { alertBatches: 1 } },
     });
-    const alerted = await insertAlertBatch(session, {
+    const alertedDonorIds = await insertAlertBatch(session, {
       request: updated,
       candidates: match.ranked,
       batch,
@@ -130,7 +152,7 @@ export async function alertNextBatch(
         session,
       );
     }
-    return { alerted, request: updated };
+    return { alertedDonorIds, request: updated };
   });
 }
 
@@ -174,6 +196,7 @@ export async function declineAlert(alertId: string, user: AuthUser): Promise<Don
       session,
     );
   });
+  publish('request', [rooms.facility(alert.facilityId), rooms.role('admin')], alert.requestId);
   return loadDonorAlertView(alert._id);
 }
 
@@ -201,7 +224,17 @@ export async function listDonorAlerts(userId: string): Promise<DonorAlertView[]>
 
 export async function summariseAlerts(requestId: Types.ObjectId): Promise<AlertSummary> {
   const alerts = await RequestAlertModel.find({ requestId }).select('response expiresAt deliveryStatus createdAt').lean();
-  const summary: AlertSummary = { total: alerts.length, pending: 0, accepted: 0, declined: 0, expired: 0, cancelled: 0, delivery: {}, lastBatchAt: null };
+  const summary: AlertSummary = {
+    total: alerts.length,
+    pending: 0,
+    accepted: 0,
+    declined: 0,
+    expired: 0,
+    cancelled: 0,
+    delivery: {},
+    sms: await smsCountsForRequest(requestId),
+    lastBatchAt: null,
+  };
   for (const a of alerts) {
     summary[effectiveResponse(a)] += 1;
     summary.delivery[a.deliveryStatus] = (summary.delivery[a.deliveryStatus] ?? 0) + 1;

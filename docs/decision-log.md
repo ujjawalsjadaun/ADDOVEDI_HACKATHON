@@ -68,6 +68,12 @@ Each entry: decision, why, and whether it needs review by a domain partner befor
 | D-55 | 2026-10-29 | Stock transfers are point-to-point (one target facility), with no live inventory feed; the target confirms what it can send. Receiving units never closes a blood request. | Pitch "coordinate stock requests" without claiming inventory integration. | — |
 | D-56 | 2026-10-29 | The official request form is one shared component used by "New request" and "Confirm family lead". Client vendor libraries are split into cached chunks (react, query, zod). | Same validation everywhere; bundle size under the warning limit. | — |
 
+| D-57 | 2026-10-29 | Realtime uses one `change { topic, id }` event and server-assigned rooms; it never carries data. Clients refetch over REST; polling stays as fallback; reconnect refetches everything. | Permissions stay in one place (REST); a lost event can only delay, never corrupt (blueprint D8). | — |
+| D-58 | 2026-10-29 | SMS goes through a MongoDB outbox written in the business transaction, sent by an in-process worker with leases, capped backoff + jitter and `OUTBOX_MAX_ATTEMPTS`. Consent, number and account status are re-checked at send time. | Durable, observable, idempotent notifications without extra infrastructure (D-16). | — |
+| D-59 | 2026-10-29 | Status vocabulary: `sent` = provider accepted; `delivered` only from a receipt (not available with the simulated provider). Shown that way in the UI. | Blueprint J3: never imply receipt from API acceptance. | — |
+| D-60 | 2026-10-29 | SMS provider is simulated only (messages visible in Admin → Notifications, numbers masked); optional `SIMULATED_SMS_FAILURE_RATE` to demonstrate retries. Inbound YES/NO and delivery webhooks remain deferred until a real provider is chosen. | No credentials; never message real people in a demo (A4). | — |
+| D-61 | 2026-10-29 | SMS templates contain only the public code, facility, district, blood group, deadline and links — never patient or donor details. | Data minimisation (security.md §5). | — |
+
 ## Open questions (non-blocking; defaults above apply)
 
 1. Should a hospital be able to confirm fulfillment with fewer units than requested (partial)? Default: yes, `unitsReceived` recorded.

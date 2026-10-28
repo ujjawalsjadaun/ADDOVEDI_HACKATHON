@@ -230,11 +230,21 @@ Ranking (stable): `beforeDeadline` desc → ETA quality (`live`/`cached`/`simula
 
 ## 4. Socket events (server → client)
 
-| Event | Room | Payload |
+Implemented in Phase 9 as a **single event** `change` with payload `RealtimeEvent { topic, id?, at }` (`shared/src/dto/notifications.ts`). It never carries data; clients invalidate the matching queries and refetch over REST.
+
+| Topic | Rooms | Emitted after |
 | --- | --- | --- |
-| `request.updated` | `facility:<id>`, `role:admin` | `{ id, version, requestStatus, verificationStatus }` |
-| `alert.created` / `alert.updated` | `user:<donorId>`, `facility:<id>` | `{ id, requestId, response }` |
-| `assignment.updated` | `user:<donorId>`, `facility:<id>` | `{ id, requestId, status, version }` |
-| `escalation.raised` | `role:admin`, `facility:<id>` | `{ requestId, step }` |
-| `notification.updated` | `role:admin` | `{ id, status }` |
-| `roadReport.updated` | `role:coordinator`, `role:admin` | `{ id }` |
+| `request` | `facility:<id>`, `role:admin`, `role:coordinator` | any request transition, alert batch, assignment change, transport change, SMS status change |
+| `alert` | `user:<donorId>` | donor alerted, own assignment changed, request closed |
+| `transport` | `facility:<id>`, `role:coordinator`, `role:admin` | transport task created/changed |
+| `transfer` | both facilities | stock transfer created/changed |
+| `lead` | `facility:<id>` | family lead submitted/decided |
+| `map` | `role:hospital_staff`, `role:coordinator`, `role:admin` | road report or access point changed |
+| `notification` | `role:admin` | outbox message status changed |
+
+### Admin notifications (Phase 9)
+| Method & path | Role | Notes |
+| --- | --- | --- |
+| `GET /admin/notifications?status=` | ADM | paginated `NotificationView[]` incl. rendered body, masked number, attempts, last error |
+| `GET /admin/notifications/health` | ADM | `NotificationQueueHealth`: provider (simulated?), counts by status, oldest queued |
+| `POST /admin/notifications/:id/retry` | ADM | `{ reason }` — re-queues a **failed** message; audited (`notification.retried`) |

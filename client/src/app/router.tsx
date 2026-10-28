@@ -28,6 +28,7 @@ import { UsersPanel } from '../features/admin/UsersPanel';
 import { DonorsPanel } from '../features/admin/DonorsPanel';
 import { ReportsPanel } from '../features/admin/ReportsPanel';
 import { AuditPanel } from '../features/admin/AuditPanel';
+import { NotificationsPanel } from '../features/admin/NotificationsPanel';
 
 /** Leaflet is only needed on map pages — load it in its own chunk. */
 const loadRoadMap = async () => ({ Component: (await import('../features/roads/RoadMapPage')).RoadMapPage });
@@ -105,6 +106,7 @@ export const routes: RouteObject[] = [
           { path: 'donors', element: <DonorsPanel /> },
           { path: 'reports', element: <ReportsPanel /> },
           { path: 'audit', element: <AuditPanel /> },
+          { path: 'notifications', element: <NotificationsPanel /> },
           { path: '*', element: <NotFoundPage /> },
         ],
       },

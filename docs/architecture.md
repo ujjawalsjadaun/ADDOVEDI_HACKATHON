@@ -199,10 +199,13 @@ If weather is unavailable, the base ETA is used and the result carries `weatherA
 
 ## 7. Realtime (Socket.IO)
 
-- Handshake authenticates with the same session cookie as REST; anonymous sockets are refused.
-- Rooms are assigned by the **server** on connect: `user:<userId>`, `facility:<facilityId>` (hospital staff), `role:admin`, `role:coordinator`. Clients cannot join arbitrary rooms.
-- Events carry only `{ type, id, version, status }`, e.g. `request.updated`, `alert.created`, `assignment.updated`, `notification.updated`. Clients refetch details through REST.
-- On reconnect the client refetches every visible resource.
+- Handshake authenticates with the same session cookie as REST (`server/src/realtime/socket.ts`); anonymous sockets are refused.
+- Rooms are assigned by the **server** on connect: `user:<userId>`, `role:<role>`, `facility:<facilityId>` (hospital staff). Clients cannot join rooms.
+- One event, `change { topic, id?, at }`, published **after** the transaction commits (`realtime/emitter.ts`). Clients invalidate the matching TanStack queries and refetch through REST (`client/src/lib/realtime/RealtimeProvider.tsx`).
+- On reconnect the client refetches everything. Polling (15–60 s) stays as the fallback, so a broken socket only makes updates slower, never wrong. The footer shows whether live updates are on or interrupted.
+- Limitation: single process; several API instances would need the Socket.IO Redis adapter.
+
+**Outbox (implemented Phase 9):** `enqueueNotification()` upserts on the unique `eventId` inside the business transaction (alert batch → `donor_alert` SMS per donor; request cancelled/fulfilled → `request_closed_for_donor` to donors still assigned). `workers/outboxWorker.ts` claims due messages with a 30 s lease (expired leases are reclaimed; the provider dedupes on `eventId`), re-checks the phone number, account status and contact consent at send time, and records `sent` (provider accepted), `failed` (permanent error, missing number/consent, or `OUTBOX_MAX_ATTEMPTS` reached) or re-queues with capped exponential backoff (5 s → 5 min, ±25 % jitter). `delivered` is only ever set from a provider receipt — the simulated provider never claims it.
 
 ## 8. Workers
 
@@ -233,6 +236,10 @@ Validated with Zod at startup in `server/src/config/env.ts`. Server refuses to s
 | `ORS_API_KEY` | if ORS | — | Routing key (secret) |
 | `WEATHER_PROVIDER` | no | `simulated` | `simulated` \| `open-meteo` |
 | `SMS_PROVIDER` | no | `simulated` | `simulated` only in MVP |
+| `PUBLIC_APP_URL` | no | `http://localhost:5173` | Base URL used for links inside SMS |
+| `SIMULATED_SMS_FAILURE_RATE` | no | `0` | Share (0–1) of simulated sends that fail transiently, to demonstrate retries |
+| `OUTBOX_MAX_ATTEMPTS` | no | `5` | After this many failed attempts a message is marked failed |
+| `OUTBOX_POLL_MS` | no | `3000` | Outbox worker interval |
 | `PROVIDER_TIMEOUT_MS` | no | `4000` | Per external call |
 | `ROUTE_CACHE_TTL_MIN` | no | `30` | Route cache lifetime |
 | `WEATHER_CACHE_TTL_MIN` | no | `15` | Weather cache lifetime (per ~10 km cell) |

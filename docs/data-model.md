@@ -138,8 +138,9 @@ The slot claim runs in a transaction: conditional `$inc slotsFilled` on the requ
 | Field | Type | Notes |
 | --- | --- | --- |
 | `eventId` | string | **unique** idempotency key, e.g. `alert:<alertId>:sms` |
-| `type` | string | template id, e.g. `donor_alert`, `request_closed`, `escalation_admin` |
-| `channel` | enum | `sms` \| `in_app` |
+| `type` | string | template id: `donor_alert`, `request_closed_for_donor` |
+| `channel` | enum | `sms` (in-app alerts live in `requestAlerts`) |
+| `requestId` | ObjectId? | for per-request SMS counts |
 | `recipientUserId` | ObjectId | phone resolved at send time (not copied into outbox) |
 | `vars` | object | template variables only — public code, facility name, blood group, deadline; **no patient data** |
 | `status` | enum | `pending` \| `sending` \| `sent` \| `delivered` \| `failed` \| `unknown` |
@@ -149,7 +150,7 @@ Indexes: `{ eventId: 1 }` unique; `{ status: 1, nextAttemptAt: 1 }`; `{ provider
 
 ## simulatedSms (dev/demo only)
 
-`{ to (masked), body, outboxEventId, createdAt }` — what the simulated provider "sent". TTL 7 days.
+`{ idempotencyKey (unique = outbox eventId), providerMessageId, toMasked, body, expiresAt }` — what the simulated provider "sent"; dedupes repeated sends like a real provider. TTL 7 days.
 
 ## escalationEvents
 

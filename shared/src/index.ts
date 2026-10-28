@@ -17,3 +17,4 @@ export * from './dto/donor';
 export * from './dto/dashboard';
 export * from './dto/geo';
 export * from './dto/logistics';
+export * from './dto/notifications';

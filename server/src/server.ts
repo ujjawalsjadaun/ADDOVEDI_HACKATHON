@@ -5,6 +5,8 @@ import { createLogger } from './lib/logger';
 import { connectDb, disconnectDb } from './lib/db';
 import { ensureIndexes } from './lib/indexes';
 import { createApp } from './app';
+import { startRealtime } from './realtime/socket';
+import { startOutboxWorker } from './workers/outboxWorker';
 
 if (existsSync('.env')) process.loadEnvFile('.env');
 
@@ -50,6 +52,8 @@ await connectWithRetry();
 
 const app = createApp({ config, logger });
 const httpServer = createServer(app);
+const io = startRealtime(httpServer, config, logger);
+const stopOutbox = startOutboxWorker(config, logger);
 
 httpServer.listen(config.PORT, () => {
   logger.info(`API listening on http://localhost:${config.PORT} (env=${config.NODE_ENV}, demoMode=${config.DEMO_MODE})`);
@@ -61,6 +65,8 @@ async function shutdown(signal: string) {
   shuttingDown = true;
   logger.info({ signal }, 'shutting down');
   clearTimeout(dbRetryTimer);
+  stopOutbox();
+  await io.close();
   httpServer.close();
   await disconnectDb().catch(() => undefined);
   process.exit(0);

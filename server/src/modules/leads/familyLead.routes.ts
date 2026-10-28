@@ -16,6 +16,7 @@ import { createRateLimiter } from '../../middleware/rateLimit';
 import { requireIdempotencyKey, runIdempotent } from '../idempotency/idempotency.service';
 import { FamilyLeadModel } from './familyLead.model';
 import { confirmFamilyLead, listFamilyLeads, rejectFamilyLead, submitFamilyLead } from './familyLead.service';
+import { publish, rooms } from '../../realtime/emitter';
 
 const listQuery = z.object({ status: z.enum(FAMILY_LEAD_STATUSES).optional() });
 
@@ -36,6 +37,7 @@ export function familyLeadRoutes(config: Config): Router {
         return { status: 202, resourceId: lead!._id, meta: receipt };
       },
     );
+    if (!outcome.replayed) publish('lead', [rooms.facility(input.hospitalId)], outcome.resourceId);
     sendData<FamilyLeadReceipt>(res, outcome.meta!, { status: outcome.status });
   });
 
@@ -46,12 +48,19 @@ export function familyLeadRoutes(config: Config): Router {
 
   router.post('/:id/confirm', requireRole('hospital_staff'), async (req, res) => {
     const input = parse(confirmFamilyLeadSchema, req.body);
-    sendData(res, await confirmFamilyLead(parseId(req.params.id), input, actionContext(res), config), { status: 201 });
+    const ctx = actionContext(res);
+    const id = parseId(req.params.id);
+    const detail = await confirmFamilyLead(id, input, ctx, config);
+    publish('lead', [rooms.facility(ctx.user.facilityId)], id);
+    sendData(res, detail, { status: 201 });
   });
 
   router.post('/:id/reject', requireRole('hospital_staff'), async (req, res) => {
     const { reason } = parse(rejectFamilyLeadSchema, req.body);
-    sendData(res, await rejectFamilyLead(parseId(req.params.id), reason, actionContext(res)));
+    const ctx = actionContext(res);
+    const lead = await rejectFamilyLead(parseId(req.params.id), reason, ctx);
+    publish('lead', [rooms.facility(ctx.user.facilityId)], lead.id);
+    sendData(res, lead);
   });
 
   return router;

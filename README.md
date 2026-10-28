@@ -2,7 +2,7 @@
 
 Hospital-led, location-aware blood-request coordination for hill districts. Verified requests reach the most reachable compatible donors, ranked by road travel time rather than straight-line distance, with fallbacks for weak connectivity.
 
-> **Status:** Phase 8 — end-to-end flow (raise → verify → alert ranked donors in-app → race-safe accept → en route / arrived → donation → hospital-confirmed fulfilment), role dashboards, map with road reports and vehicle access points, plus family leads, coordinator transport tasks and facility-to-facility stock transfers. Travel times use live routing (optional) or a labelled simulation. SMS is not connected yet.
+> **Status:** Phase 9 — end-to-end flow (raise → verify → alert ranked donors in-app and by **simulated SMS** → race-safe accept → en route / arrived → donation → hospital-confirmed fulfilment), role dashboards, map and road reports, family leads, transport tasks, stock transfers, and **live updates** over Socket.IO. Travel times use live routing (optional) or a labelled simulation. No real SMS is ever sent.
 > All donor, patient and facility data in this project is synthetic. This is not an official dispatch service and makes no medical eligibility decisions.
 
 ## Stack
@@ -28,10 +28,12 @@ Auth: HttpOnly session cookie (signed JWT with server-side revocation), bcrypt p
 │  │  ├─ middleware/  request id, JSON-only, authenticate, authorize, rate limit, error handler
 │  │  ├─ modules/     one folder per feature: health, auth, users, hospitals, admin, audit,
 │  │  │               requests, idempotency, public-checker, donors, matching, alerts,
-│  │  │               assignments, dashboard, roads, geo, leads, transport, transfers
-│  │  │               (+ models.ts registry)
+│  │  │               assignments, dashboard, roads, geo, leads, transport, transfers,
+│  │  │               notifications (+ models.ts registry)
 │  │  ├─ providers/   external-service adapters: routing (simulated, OpenRouteService + cache),
-│  │  │               weather (simulated, Open-Meteo)
+│  │  │               weather (simulated, Open-Meteo), sms (simulated)
+│  │  ├─ realtime/    Socket.IO server (cookie auth, server-assigned rooms) + post-commit emitter
+│  │  ├─ workers/     outbox worker (SMS sending with leases and retries)
 │  │  ├─ scripts/     operator commands (create-admin, db:indexes)
 │  │  ├─ types/       Express type augmentation
 │  │  ├─ app.ts       Express app factory
@@ -44,7 +46,8 @@ Auth: HttpOnly session cookie (signed JWT with server-side revocation), bcrypt p
 │     │               coordinator, admin — plus cross-role requests/, roads/, transport/
 │     ├─ components/  layout/ (shell, sub-nav, status footer, offline banner), map/ (Leaflet view),
 │     │               ui/ (states, forms, badges, stat cards, data-freshness, ETA)
-│     └─ lib/         api/ (fetch client, query strings), hooks/, format, labels, idempotency
+│     └─ lib/         api/ (fetch client, query strings), realtime/ (Socket.IO provider), hooks/,
+│                     format, labels, idempotency
 └─ docs/              architecture, contracts, state machines, security, decisions
 ```
 
@@ -141,6 +144,8 @@ The Vite dev server proxies `/api` to the API, so the browser sees one origin an
 | `/api/family-leads` (list, `/:id/confirm`, `/:id/reject`) | hospital staff (own facility) |
 | `/api/transport-tasks` (list, create, `/:id/status`) | hospital staff, coordinator, admin (per-action rules) |
 | `/api/stock-transfers` (list, create with `Idempotency-Key`, `/:id/status`) | hospital staff |
+| `/api/admin/notifications` (list, `/health`, `/:id/retry`) | admin |
+| Socket.IO at `/socket.io` — event `change { topic, id }` | signed-in users (rooms assigned by the server) |
 
 Full contracts: [docs/api-contracts.md](docs/api-contracts.md).
 
@@ -157,10 +162,11 @@ Full contracts: [docs/api-contracts.md](docs/api-contracts.md).
 
 ## Known limitations (current phase)
 
-- Alerts are **in-app only** (donors see them when they open the app); SMS arrives in Phase 9.
+- SMS is **simulated**: messages appear under **Admin → Notifications** (numbers masked) and are never sent to a phone. "Sent" means the provider accepted it; there is no delivery receipt, and YES/NO replies by SMS are not supported yet. Set `SIMULATED_SMS_FAILURE_RATE=0.3` to watch retries.
+- The outbox worker and Socket.IO run inside the API process: if the host sleeps they pause (pending messages resume on wake), and one process only (no multi-instance scaling).
 - Without an ORS key, travel times are a labelled **simulation** (straight line × 1.8 at 25 km/h). "Near the route" for road reports is a 2 km corridor around the straight line, not the real road.
 - Map tiles come from openstreetmap.org (needs internet; respect the OSM tile usage policy for heavy use).
-- Alerts are not pushed in real time; pages refresh every 15–30 s until Socket.IO (Phase 9). The escalation ladder (automatic widening at 5/10/15 min) arrives in Phase 10 — until then the hospital uses **Alert more donors**.
+- The escalation ladder (automatic widening at 5/10/15 min), alert/request expiry and the stale-data worker arrive in Phase 10 — until then the hospital uses **Alert more donors**.
 - Family leads have no phone-number verification (OTP) yet; they stay pending and can never alert donors regardless. The family is not notified automatically when a lead is confirmed or rejected — staff call back.
 - Transport is single-leg (no relay handovers); stock transfers have no live inventory feed.
 - Requests past their deadline stay open until the expiry worker (Phase 10); the hospital dashboard flags them ("Deadline passed — fulfil or cancel") and verification is refused after the deadline.

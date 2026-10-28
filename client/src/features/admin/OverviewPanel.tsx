@@ -23,6 +23,8 @@ export function OverviewPanel() {
         <StatCard label={`Unverified > ${o.verificationDeadlineMinutes} min`} value={o.counts.overdueVerifications} alertWhenNonZero="danger" />
         <StatCard label="Requests with nobody responding" value={o.counts.requestsWithoutResponders} alertWhenNonZero="danger" />
         <StatCard label="Active requests" value={o.counts.activeRequests} to="/admin/requests" />
+        <StatCard label="SMS queued" value={o.counts.notificationsPending} to="/admin/notifications" />
+        <StatCard label="SMS failed" value={o.counts.notificationsFailed} to="/admin/notifications" alertWhenNonZero="danger" />
         <StatCard label="Failed sign-ins (24 h)" value={o.counts.failedLogins24h} to="/admin/audit" alertWhenNonZero={o.counts.failedLogins24h > 20 ? 'danger' : undefined} />
       </div>
 

@@ -15,6 +15,8 @@ import { effectiveResponse } from '../alerts/alert.dto';
 import { RequestAlertModel } from '../alerts/alert.model';
 import { cancelPendingAlerts, loadDonorAlertView } from '../alerts/alert.service';
 import { DonorProfileModel } from '../donors/donor.model';
+import { enqueueNotification } from '../notifications/outbox.service';
+import { publish, rooms } from '../../realtime/emitter';
 import { recordStrike } from '../donors/donor.service';
 import { HospitalModel } from '../hospitals/hospital.model';
 import { BloodRequestModel } from '../requests/request.model';
@@ -22,6 +24,12 @@ import { UserModel } from '../users/user.model';
 import { toAssignmentForHospital, toDonorAssignmentView } from './assignment.dto';
 import { AssignmentModel, type Assignment, type AssignmentDocument } from './assignment.model';
 import { DONOR_ACTION_FROM, donorAllowedActions, HOSPITAL_ACTION_FROM, hospitalAllowedActions } from './assignment.transitions';
+
+/** Realtime nudge after a committed assignment change: the facility, admins and the donor. */
+function announceAssignment(a: Pick<AssignmentDocument, 'requestId' | 'facilityId' | 'donorUserId'>): void {
+  publish('request', [rooms.facility(a.facilityId), rooms.role('admin'), rooms.role('coordinator')], a.requestId);
+  publish('alert', [rooms.user(a.donorUserId)], a.requestId);
+}
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -176,6 +184,7 @@ export async function acceptAlert(alertId: string, user: AuthUser, httpRequestId
     }
     throw err;
   }
+  announceAssignment(assignment);
   return { alert: await loadDonorAlertView(alert._id), assignment: await donorAssignmentView(assignment, user) };
 }
 
@@ -221,6 +230,7 @@ export async function updateDonorAssignment(
     return a;
   });
 
+  announceAssignment(updated);
   return { view: await donorAssignmentView(updated, ctx.user), slotReleased: input.status === 'withdrawn', requestId: updated.requestId };
 }
 
@@ -229,7 +239,7 @@ export async function updateDonorAssignment(
 export async function confirmArrival(id: string, expectedVersion: number, ctx: ActionContext): Promise<AssignmentDocument> {
   const current = await loadForHospital(id, ctx.user);
   if (!hospitalAllowedActions(current, ctx.user).includes('confirm_arrival')) throw new AppError('INVALID_TRANSITION', 'Arrival cannot be confirmed now.');
-  return withTransaction(async (session) => {
+  const done = await withTransaction(async (session) => {
     const a = await transitionAssignment(session, {
       id,
       expectedVersion,
@@ -239,13 +249,15 @@ export async function confirmArrival(id: string, expectedVersion: number, ctx: A
     await recordAudit(auditOnRequest(userActor(ctx.user), a, 'assignment.arrival_confirmed', { requestId: ctx.requestId }), session);
     return a;
   });
+  announceAssignment(done);
+  return done;
 }
 
 /** Hospital confirms this donor donated. Updates the donor's rest period; does NOT fulfil the request. */
 export async function markDonated(id: string, expectedVersion: number, ctx: ActionContext): Promise<AssignmentDocument> {
   const current = await loadForHospital(id, ctx.user);
   if (!hospitalAllowedActions(current, ctx.user).includes('mark_donated')) throw new AppError('INVALID_TRANSITION', 'Only an arrived donor can be marked as donated.');
-  return withTransaction(async (session) => {
+  const done = await withTransaction(async (session) => {
     const now = new Date();
     const a = await transitionAssignment(session, {
       id,
@@ -258,6 +270,8 @@ export async function markDonated(id: string, expectedVersion: number, ctx: Acti
     await recordAudit(auditOnRequest(userActor(ctx.user), a, 'assignment.donated', { requestId: ctx.requestId }), session);
     return a;
   });
+  announceAssignment(done);
+  return done;
 }
 
 export async function markNoShow(id: string, input: NoShowInput, ctx: ActionContext): Promise<{ assignment: AssignmentDocument; slotReleased: boolean }> {
@@ -279,19 +293,40 @@ export async function markNoShow(id: string, input: NoShowInput, ctx: ActionCont
     await recordStrike(session, { donorUserId: a.donorUserId, requestId: a.requestId, reason: input.reason, ctx });
     return a;
   });
+  announceAssignment(assignment);
   return { assignment, slotReleased: input.needStillExists };
 }
 
 // ── request closure ──────────────────────────────────────────────────────────
 
 /** Called inside the request's cancel/fulfil/expire transaction: ends alerts and active assignments. */
-export async function endForClosedRequest(session: ClientSession, requestId: Types.ObjectId, reason: string): Promise<void> {
-  await cancelPendingAlerts(session, requestId);
+export async function endForClosedRequest(
+  session: ClientSession,
+  request: { _id: Types.ObjectId; publicCode: string; facilityId: Types.ObjectId },
+  outcome: 'fulfilled' | 'cancelled' | 'expired',
+  reason: string,
+): Promise<string[]> {
+  await cancelPendingAlerts(session, request._id);
+  const active = await AssignmentModel.find({ requestId: request._id, isActive: true }).session(session).select('donorUserId');
   await AssignmentModel.updateMany(
-    { requestId, isActive: true },
+    { requestId: request._id, isActive: true },
     { $set: { status: 'cancelled', isActive: false, holdsSlot: false, endedAt: new Date(), endReason: reason }, $inc: { version: 1 } },
     { session },
   );
+  // Donors who may already be travelling are told by SMS that they are no longer needed.
+  const facility = await HospitalModel.findById(request.facilityId).session(session).select('name');
+  for (const a of active) {
+    await enqueueNotification(session, {
+      eventId: `request:${request._id.toString()}:closed:${a._id.toString()}`,
+      type: 'request_closed_for_donor',
+      recipientUserId: a.donorUserId,
+      requestId: request._id,
+      vars: { publicCode: request.publicCode, facilityName: facility?.name ?? 'the hospital', outcome },
+    });
+  }
+  // Pending alerts were cancelled too: those donors' lists change as well.
+  const alerted = await RequestAlertModel.find({ requestId: request._id }).session(session).distinct('donorUserId');
+  return [...new Set([...active.map((a) => a.donorUserId.toString()), ...alerted.map(String)])];
 }
 
 // ── reads ────────────────────────────────────────────────────────────────────

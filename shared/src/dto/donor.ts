@@ -1,4 +1,5 @@
 import type { AlertDeliveryStatus, AlertResponse, AssignmentStatus, BloodGroup, EtaQuality } from '../enums';
+import type { NotificationStatus } from './notifications';
 import type { DonorAvailability, DonorReviewStatus, DonorVerificationStatus } from '../schemas/donors';
 
 export type WeatherAdjustment = 'none' | 'moderate' | 'heavy' | 'unavailable';
@@ -96,6 +97,8 @@ export interface AlertSummary {
   expired: number;
   cancelled: number;
   delivery: Partial<Record<AlertDeliveryStatus, number>>;
+  /** SMS copies of this request's alerts, by outbox status (sent ≠ received). */
+  sms: Partial<Record<NotificationStatus, number>>;
   lastBatchAt: string | null;
 }
 

@@ -32,6 +32,12 @@ const envSchema = z
     ORS_API_KEY: z.string().optional(),
     WEATHER_PROVIDER: z.enum(['simulated', 'open-meteo']).default('simulated'),
     SMS_PROVIDER: z.enum(['simulated']).default('simulated'),
+    /** Base URL of the web app, used for links in SMS (e.g. the public checker). */
+    PUBLIC_APP_URL: z.url().default('http://localhost:5173'),
+    /** Simulated SMS only: share of sends that fail transiently (0–1), to demonstrate retries. */
+    SIMULATED_SMS_FAILURE_RATE: z.coerce.number().min(0).max(1).default(0),
+    OUTBOX_MAX_ATTEMPTS: intIn(1, 20).default(5),
+    OUTBOX_POLL_MS: intIn(500, 60_000).default(3000),
     PROVIDER_TIMEOUT_MS: intIn(500, 30_000).default(4000),
     ROUTE_CACHE_TTL_MIN: intIn(1, 1440).default(30),
     WEATHER_CACHE_TTL_MIN: intIn(1, 180).default(15),

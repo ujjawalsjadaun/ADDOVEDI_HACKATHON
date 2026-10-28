@@ -11,6 +11,11 @@ import { actionContext, currentUser, requireRole } from '../../middleware/author
 import { requireIdempotencyKey, runIdempotent } from '../idempotency/idempotency.service';
 import { StockTransferModel } from './stockTransfer.model';
 import { actOnStockTransfer, createStockTransfer, listStockTransfers, viewStockTransfer } from './stockTransfer.service';
+import { publish, rooms } from '../../realtime/emitter';
+
+function announce(t: StockTransferView): void {
+  publish('transfer', [rooms.facility(t.requesting.id), rooms.facility(t.responding.id)], t.id);
+}
 
 /** /api/stock-transfers — facility-to-facility blood stock requests. Hospital staff only. */
 export function stockTransferRoutes(): Router {
@@ -31,12 +36,16 @@ export function stockTransferRoutes(): Router {
       async () => ({ status: 201, resourceId: (await createStockTransfer(input, ctx))._id }),
     );
     const transfer = await StockTransferModel.findById(outcome.resourceId);
-    sendData<StockTransferView>(res, await viewStockTransfer(transfer!, ctx.user), { status: outcome.status });
+    const view = await viewStockTransfer(transfer!, ctx.user);
+    if (!outcome.replayed) announce(view);
+    sendData<StockTransferView>(res, view, { status: outcome.status });
   });
 
   router.post('/:id/status', async (req, res) => {
     const input = parse(stockTransferActionSchema, req.body);
-    sendData(res, await actOnStockTransfer(parseId(req.params.id), input, actionContext(res)));
+    const view = await actOnStockTransfer(parseId(req.params.id), input, actionContext(res));
+    announce(view);
+    sendData(res, view);
   });
 
   return router;

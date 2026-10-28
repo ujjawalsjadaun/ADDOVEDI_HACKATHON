@@ -44,6 +44,8 @@ export interface AdminOverview {
     requestsWithoutResponders: number;
     openSuspiciousReports: number;
     failedLogins24h: number;
+    notificationsPending: number;
+    notificationsFailed: number;
   };
   overdueVerifications: { id: string; publicCode: string; facilityName: string; bloodGroup: BloodGroup; createdAt: string; deadlineAt: string }[];
   /** Verified, still awaiting donors, with no pending or accepted alert — someone must act. */

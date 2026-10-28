@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router';
 import { OfflineBanner } from './OfflineBanner';
 import { ApiStatus } from './ApiStatus';
+import { LiveStatus } from './LiveStatus';
+import { RealtimeProvider } from '../../lib/realtime/RealtimeProvider';
 import { useLogout, useMe } from '../../features/auth/api';
 import { ROLE_HOME, ROLE_LABEL } from '../../features/auth/roleHome';
 
@@ -33,6 +35,7 @@ export function AppLayout() {
   }
 
   return (
+    <RealtimeProvider enabled={!!session}>
     <div className="flex min-h-dvh flex-col">
       <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50 focus:rounded focus:bg-white focus:px-3 focus:py-2">
         Skip to content
@@ -92,13 +95,17 @@ export function AppLayout() {
 
       <footer className="border-t border-slate-200 bg-white">
         <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-          <ApiStatus />
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+            <ApiStatus />
+            <LiveStatus />
+          </div>
           <p className="text-xs text-slate-500">
             Not an emergency dispatch service. No medical eligibility decisions are made by this system.
           </p>
         </div>
       </footer>
     </div>
+    </RealtimeProvider>
   );
 }
 

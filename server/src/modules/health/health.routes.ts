@@ -17,7 +17,7 @@ export function healthRoutes(config: Config): Router {
     const providers: HealthReady['providers'] = {
       routing: config.ROUTING_PROVIDER === 'simulated' ? 'simulated' : 'unchecked',
       weather: config.WEATHER_PROVIDER === 'simulated' ? 'simulated' : 'unchecked',
-      sms: 'simulated',
+      sms: config.SMS_PROVIDER === 'simulated' ? 'simulated' : 'unchecked',
     };
     sendData<HealthReady>(
       res,

@@ -16,3 +16,9 @@ export const listReportsQuerySchema = paginationQuerySchema.extend({
 });
 
 export const reviewReportSchema = z.object({ reason: reasonSchema });
+
+export const listNotificationsQuerySchema = paginationQuerySchema.extend({
+  status: z.enum(['pending', 'sending', 'sent', 'delivered', 'failed', 'unknown']).optional(),
+});
+
+export const retryNotificationSchema = z.object({ reason: reasonSchema });

@@ -23,6 +23,7 @@ import { recordAudit, userActor } from '../audit/audit.service';
 import { alertNextBatch, insertAlertBatch, matchFirstBatch, summariseAlerts } from '../alerts/alert.service';
 import { endForClosedRequest, listForHospital } from '../assignments/assignment.service';
 import { matchDonors, toCandidatePreview } from '../matching/matching.service';
+import { publish, rooms } from '../../realtime/emitter';
 import { assertFacilityScope } from '../auth/auth.policy';
 import type { ActionContext, AuthUser } from '../auth/auth.types';
 import { HospitalModel, type HospitalDocument } from '../hospitals/hospital.model';
@@ -130,6 +131,12 @@ function audit(ctx: ActionContext, request: BloodRequestDocument, action: string
   };
 }
 
+/** Realtime nudge after a committed change: facility, admins, coordinators; plus affected donors. */
+function announce(request: { _id: Types.ObjectId; facilityId: Types.ObjectId }, donorUserIds: string[] = []): void {
+  publish('request', [rooms.facility(request.facilityId), rooms.role('admin'), rooms.role('coordinator')], request._id);
+  if (donorUserIds.length > 0) publish('alert', donorUserIds.map((id) => rooms.user(id)), request._id);
+}
+
 // ── create ───────────────────────────────────────────────────────────────────
 
 export async function createRequest(
@@ -194,6 +201,7 @@ export async function createRequest(
         if (onCreated) await onCreated(session, request);
         return request;
       });
+      announce(request);
       return { request, possibleDuplicate };
     } catch (err) {
       if (!isDuplicateKeyError(err)) throw err;
@@ -282,6 +290,7 @@ export async function verifyRequest(id: string, input: VerifyRequestInput, ctx: 
   // Rank donors before the transaction (routing calls are slow); the batch is inserted inside it.
   const firstBatch = await matchFirstBatch(request, facility, config);
 
+  let alerted: string[] = [];
   const updated = await withTransaction(async (session) => {
     const now = new Date();
     const doc = await applyTransition(session, {
@@ -307,9 +316,10 @@ export async function verifyRequest(id: string, input: VerifyRequestInput, ctx: 
       session,
     );
     // No donor is contacted before this point (docs/state-machines.md §2).
-    await insertAlertBatch(session, { request: doc, candidates: firstBatch.ranked, batch: 0, actor: userActor(ctx.user), requestId: ctx.requestId, config });
+    alerted = await insertAlertBatch(session, { request: doc, candidates: firstBatch.ranked, batch: 0, actor: userActor(ctx.user), requestId: ctx.requestId, config });
     return doc;
   });
+  announce(updated, alerted);
   return buildDetail(updated, facility, ctx.user, config);
 }
 
@@ -348,6 +358,7 @@ export async function rejectRequest(id: string, input: ReasonedTransitionInput, 
     );
     return doc;
   });
+  announce(updated);
   return buildDetail(updated, facility, ctx.user, config);
 }
 
@@ -394,11 +405,13 @@ export async function reviewDuplicate(id: string, input: DuplicateReviewInput, c
     );
     return doc;
   });
+  announce(updated);
   return buildDetail(updated, facility, ctx.user, config);
 }
 
 export async function cancelRequest(id: string, input: ReasonedTransitionInput, ctx: ActionContext, config: Config): Promise<RequestDetail> {
   const { request, facility } = await prepare(id, 'cancel', ctx, config);
+  let notified: string[] = [];
   const updated = await withTransaction(async (session) => {
     const doc = await applyTransition(session, {
       id,
@@ -406,13 +419,14 @@ export async function cancelRequest(id: string, input: ReasonedTransitionInput, 
       action: 'cancel',
       update: { $set: closeUpdate('cancelled', ctx, { note: input.reason }) },
     });
-    await endForClosedRequest(session, doc._id, 'request cancelled by the hospital');
+    notified = await endForClosedRequest(session, doc, 'cancelled', 'request cancelled by the hospital');
     await recordAudit(
       audit(ctx, doc, 'request.cancelled', { reason: input.reason, changes: { requestStatus: [request.requestStatus, 'closed'] } }),
       session,
     );
     return doc;
   });
+  announce(updated, notified);
   return buildDetail(updated, facility, ctx.user, config);
 }
 
@@ -423,6 +437,7 @@ export async function fulfillRequest(id: string, input: FulfillRequestInput, ctx
       fields: { unitsReceived: `cannot exceed the ${request.unitsRequested} unit(s) requested` },
     });
   }
+  let notified: string[] = [];
   const updated = await withTransaction(async (session) => {
     const doc = await applyTransition(session, {
       id,
@@ -431,7 +446,7 @@ export async function fulfillRequest(id: string, input: FulfillRequestInput, ctx
       update: { $set: closeUpdate('fulfilled', ctx, { note: input.note, unitsReceived: input.unitsReceived }) },
     });
     // Donors still on their way are released; donations already made stay recorded.
-    await endForClosedRequest(session, doc._id, 'request fulfilled — no longer needed');
+    notified = await endForClosedRequest(session, doc, 'fulfilled', 'request fulfilled — no longer needed');
     await recordAudit(
       audit(ctx, doc, 'request.fulfilled', {
         changes: { requestStatus: [request.requestStatus, 'closed'] },
@@ -441,6 +456,7 @@ export async function fulfillRequest(id: string, input: FulfillRequestInput, ctx
     );
     return doc;
   });
+  announce(updated, notified);
   return buildDetail(updated, facility, ctx.user, config);
 }
 
@@ -461,12 +477,13 @@ export async function alertMoreDonors(
   config: Config,
 ): Promise<RequestDetail> {
   await prepare(id, 'alert_next_batch', ctx, config);
-  const { request } = await alertNextBatch(id, {
+  const { request, alertedDonorIds } = await alertNextBatch(id, {
     actor: userActor(ctx.user),
     config,
     expectedVersion: input.expectedVersion,
     reason: input.reason,
     httpRequestId: ctx.requestId,
   });
+  announce(request, alertedDonorIds);
   return buildDetail(request, await loadFacility(request.facilityId), ctx.user, config);
 }
