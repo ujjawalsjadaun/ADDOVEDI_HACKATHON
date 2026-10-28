@@ -30,6 +30,13 @@ const config = loadConfigOrExit();
 
 const logger = createLogger(config.LOG_LEVEL);
 
+if (config.NODE_ENV === 'production') {
+  // Cannot be detected reliably, so say it loudly instead of failing: behind a proxy every visitor shares one IP.
+  if (!config.TRUST_PROXY) logger.warn('NODE_ENV=production with TRUST_PROXY=false — behind a reverse proxy set TRUST_PROXY=true or rate limits treat all visitors as one');
+  if (!config.CLIENT_DIST_DIR) logger.info('CLIENT_DIST_DIR not set — the web app must be hosted separately on the same site as the API');
+  if (config.SMS_PROVIDER === 'simulated') logger.warn('SMS is simulated: no message will reach any phone');
+}
+
 // Mongoose reconnects by itself after a connection is lost, but not when the *first* connect fails.
 // Start serving anyway so /api/health/ready can report the outage (mutations fail closed), and keep retrying.
 const DB_RETRY_MS = 15_000;

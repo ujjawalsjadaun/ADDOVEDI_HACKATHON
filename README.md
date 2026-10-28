@@ -2,7 +2,7 @@
 
 Hospital-led, location-aware blood-request coordination for hill districts. Verified requests reach the most reachable compatible donors, ranked by road travel time rather than straight-line distance, with fallbacks for weak connectivity.
 
-> **Status:** Phase 11 (review and hardening) — end-to-end flow (raise → verify → alert ranked donors in-app and by **simulated SMS** → race-safe accept → en route / arrived → donation → hospital-confirmed fulfilment), role dashboards, map and road reports, family leads, transport tasks, stock transfers, live updates over Socket.IO, and **automatic escalation (5/10/15 min), request expiry and an admin "under review" flag**. Travel times use live routing (optional) or a labelled simulation. No real SMS is ever sent.
+> **Status:** Phase 12 (release preparation: deployment guide, release checklist, production safeguards) — end-to-end flow (raise → verify → alert ranked donors in-app and by **simulated SMS** → race-safe accept → en route / arrived → donation → hospital-confirmed fulfilment), role dashboards, map and road reports, family leads, transport tasks, stock transfers, live updates over Socket.IO, and **automatic escalation (5/10/15 min), request expiry and an admin "under review" flag**. Travel times use live routing (optional) or a labelled simulation. No real SMS is ever sent.
 > All donor, patient and facility data in this project is synthetic. This is not an official dispatch service and makes no medical eligibility decisions.
 
 ## Stack
@@ -105,6 +105,16 @@ npm run dev        # API on http://localhost:4000 and web app on http://localhos
 
 The Vite dev server proxies `/api` to the API, so the browser sees one origin and the session cookie just works. The footer shows live server status; if the database is unreachable the API still starts, reports `degraded` on `/api/health/ready`, and retries the connection every 15 s.
 
+### Run the production build locally (single host)
+
+```bash
+npm run build
+# in server/.env add:  CLIENT_DIST_DIR=../client/dist
+npm start          # API + built web app + live updates on http://localhost:4000
+```
+
+The API then serves the web app itself (one origin, no proxy). For internet deployment — Atlas, environment variables, HTTPS, WebSocket and rollback notes — see [docs/deployment.md](docs/deployment.md). In `NODE_ENV=production` the API refuses to start unless `CLIENT_ORIGIN` and `PUBLIC_APP_URL` are `https://`, the two secrets differ, and `DEMO_MODE` is off.
+
 ## Commands
 
 | Command | What it does |
@@ -152,6 +162,8 @@ Full contracts: [docs/api-contracts.md](docs/api-contracts.md).
 
 ## Documentation
 
+- [Deployment guide](docs/deployment.md)
+- [Release go / no-go checklist](docs/release-checklist.md)
 - [Code review and known limitations](docs/security-review.md)
 - [Repository audit](docs/repository-audit.md)
 - [Requirements traceability](docs/requirements-traceability.md)

@@ -27,6 +27,11 @@ const envSchema = z
     SESSION_TTL_HOURS: intIn(1, 72).default(8),
     CLIENT_ORIGIN: originList.default(['http://localhost:5173']),
     TRUST_PROXY: bool.default(false),
+    /**
+     * Folder of the built web app (e.g. ../client/dist). When set, the API serves it and falls back to
+     * index.html for app routes, so web app, API and WebSockets share one origin and one cookie.
+     */
+    CLIENT_DIST_DIR: z.string().min(1).optional(),
     DEMO_MODE: bool.default(false),
     ROUTING_PROVIDER: z.enum(['simulated', 'openrouteservice']).default('simulated'),
     ORS_API_KEY: z.string().optional(),
@@ -60,6 +65,18 @@ const envSchema = z
   .superRefine((env, ctx) => {
     if (env.NODE_ENV === 'production' && env.DEMO_MODE) {
       ctx.addIssue({ code: 'custom', path: ['DEMO_MODE'], message: 'must be false when NODE_ENV=production' });
+    }
+    if (env.SESSION_SECRET === env.PATIENT_REF_SECRET) {
+      ctx.addIssue({ code: 'custom', path: ['PATIENT_REF_SECRET'], message: 'must differ from SESSION_SECRET' });
+    }
+    if (env.NODE_ENV === 'production') {
+      // Cookies are Secure in production and the app must be served over HTTPS.
+      if (!env.CLIENT_ORIGIN.every((o) => o.startsWith('https://'))) {
+        ctx.addIssue({ code: 'custom', path: ['CLIENT_ORIGIN'], message: 'every origin must start with https:// in production' });
+      }
+      if (!env.PUBLIC_APP_URL.startsWith('https://')) {
+        ctx.addIssue({ code: 'custom', path: ['PUBLIC_APP_URL'], message: 'must start with https:// in production' });
+      }
     }
     if (env.ROUTING_PROVIDER === 'openrouteservice' && !env.ORS_API_KEY) {
       ctx.addIssue({ code: 'custom', path: ['ORS_API_KEY'], message: 'required when ROUTING_PROVIDER=openrouteservice' });

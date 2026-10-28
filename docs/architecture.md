@@ -230,7 +230,8 @@ Validated with Zod at startup in `server/src/config/env.ts`. Server refuses to s
 | `PATIENT_REF_SECRET` | yes | — | ≥ 32 chars; HMAC key for patient reference hashes (secret) |
 | `SESSION_TTL_HOURS` | no | `8` | Session lifetime |
 | `CLIENT_ORIGIN` | no | `http://localhost:5173` | Allowed CORS origin(s), comma-separated |
-| `TRUST_PROXY` | no | `false` | Set when behind a reverse proxy |
+| `TRUST_PROXY` | no | `false` | Set `true` behind a reverse proxy / load balancer (production logs a warning if it is false) |
+| `CLIENT_DIST_DIR` | no | — | Folder of the built web app (`../client/dist`); the API then serves it with an SPA fallback, one origin |
 | `DEMO_MODE` | no | `false` | Enables `/api/dev/*`; forbidden when `NODE_ENV=production` |
 | `ROUTING_PROVIDER` | no | `simulated` | `simulated` \| `openrouteservice` |
 | `ORS_API_KEY` | if ORS | — | Routing key (secret) |

@@ -81,6 +81,10 @@ Each entry: decision, why, and whether it needs review by a domain partner befor
 
 | D-66 | 2026-10-29 | Phase 11 is a code-review and hardening pass (findings in `docs/security-review.md`); because of D-26 no test matrix or load test was produced. The review's fixes: pause honoured on every alert path, stale idempotency claims released after 2 min, workers quiet during DB outages, process-level error handlers, `Cache-Control: no-store` on the API. | Honest evidence standard without tests: what was reviewed, fixed, and left open. | — |
 
+| D-67 | 2026-10-29 | Recommended deployment is single-host: the API serves the built web app (`CLIENT_DIST_DIR`), so page, API and WebSocket share an origin and the `SameSite=Lax` cookie works. Split hosting is supported only on the same site. A Content-Security-Policy allows self, OpenStreetMap tiles, `data:` images and same-origin WebSockets. | Fewest moving parts; avoids cross-site cookie and CORS problems. | — |
+| D-68 | 2026-10-29 | In production the API refuses to start unless `CLIENT_ORIGIN` and `PUBLIC_APP_URL` are `https://`; the two secrets must differ in every environment. A missing `TRUST_PROXY` only warns (it cannot be detected reliably). | Fail fast on unsafe configuration. | — |
+| D-69 | 2026-10-29 | No demo seed or reset scripts and no Dockerfile are shipped (user instruction; Docker is also unavailable locally and could not be verified). The first admin comes from `create-admin`; the release checklist lists the manual demo preparation. | Scope decision D-26; avoid unverified artifacts. | — |
+
 ## Open questions (non-blocking; defaults above apply)
 
 1. Should a hospital be able to confirm fulfillment with fewer units than requested (partial)? Default: yes, `unitsReceived` recorded.

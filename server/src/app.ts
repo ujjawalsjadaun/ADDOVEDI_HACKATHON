@@ -9,6 +9,7 @@ import { requestId } from './middleware/requestId';
 import { requireJson } from './middleware/requireJson';
 import { errorHandler, notFound } from './middleware/errorHandler';
 import { authenticate } from './middleware/authenticate';
+import { serveClient } from './middleware/serveClient';
 import { healthRoutes } from './modules/health/health.routes';
 import { authRoutes } from './modules/auth/auth.routes';
 import { publicHospitalRoutes } from './modules/hospitals/hospital.routes';
@@ -49,7 +50,24 @@ export function createApp({ config, logger }: AppDeps) {
       autoLogging: config.NODE_ENV !== 'test',
     }),
   );
-  app.use(helmet());
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          scriptSrc: ["'self'"],
+          styleSrc: ["'self'", "'unsafe-inline'"], // Leaflet positions elements with inline styles
+          // OpenStreetMap tiles for the map; data: for the inline favicon.
+          imgSrc: ["'self'", 'data:', 'blob:', 'https://*.tile.openstreetmap.org'],
+          connectSrc: ["'self'", 'ws:', 'wss:'],
+          objectSrc: ["'none'"],
+          frameAncestors: ["'none'"],
+          baseUri: ["'self'"],
+          formAction: ["'self'"],
+        },
+      },
+    }),
+  );
   app.use(
     cors({
       origin: config.CLIENT_ORIGIN,
@@ -88,6 +106,10 @@ export function createApp({ config, logger }: AppDeps) {
   api.use(notFound);
 
   app.use('/api', api);
+  if (config.CLIENT_DIST_DIR) {
+    const client = serveClient(config.CLIENT_DIST_DIR, logger);
+    if (client) app.use(client);
+  }
   app.use(notFound);
   app.use(errorHandler(logger, config.NODE_ENV === 'development'));
 
