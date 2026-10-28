@@ -13,7 +13,7 @@ import {
   type CandidatePreview,
   type VerifyRequestInput,
 } from '@golden-hour/shared';
-import { Types } from 'mongoose';
+import { Types, type ClientSession } from 'mongoose';
 import type { Config } from '../../config/env';
 import { hmacHex } from '../../lib/crypto';
 import { AppError } from '../../lib/errors';
@@ -136,6 +136,8 @@ export async function createRequest(
   input: CreateRequestInput,
   ctx: ActionContext,
   config: Config,
+  /** Runs inside the creation transaction (e.g. linking a family lead); throwing aborts everything. */
+  onCreated?: (session: ClientSession, request: BloodRequestDocument) => Promise<void>,
 ): Promise<{ request: BloodRequestDocument; possibleDuplicate: boolean }> {
   const { user } = ctx;
   if (user.role !== 'hospital_staff' || !user.facilityId) throw new AppError('FORBIDDEN', 'Only hospital staff can raise requests.');
@@ -189,6 +191,7 @@ export async function createRequest(
             session,
           );
         }
+        if (onCreated) await onCreated(session, request);
         return request;
       });
       return { request, possibleDuplicate };

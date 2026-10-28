@@ -10,4 +10,7 @@ import './donors/donor.model';
 import './alerts/alert.model';
 import './assignments/assignment.model';
 import './roads/roadReport.model';
+import './leads/familyLead.model';
+import './transport/transportTask.model';
+import './transfers/stockTransfer.model';
 import '../providers/routing/routeCache.model';

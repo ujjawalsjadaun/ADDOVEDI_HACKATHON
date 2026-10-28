@@ -21,6 +21,7 @@ export function AppLayout() {
   // Public checker for everyone; the signed-in user's own area; nothing else to dead-end in.
   const nav = [
     { to: '/check', label: 'Is this real?' },
+    ...(!session || session.user.role === 'donor' ? [{ to: '/help', label: 'Ask for blood' }] : []),
     ...(session ? [{ to: ROLE_HOME[session.user.role], label: ROLE_LABEL[session.user.role] }] : []),
   ];
   const onLogout = () => logout.mutate(undefined, { onSettled: () => navigate('/', { replace: true }) });

@@ -6,6 +6,8 @@ import { useMe } from '../auth/api';
 const TABS = [
   { to: '/hospital', label: 'Dashboard', end: true },
   { to: '/hospital/requests', label: 'Requests' },
+  { to: '/hospital/leads', label: 'Family leads' },
+  { to: '/hospital/transfers', label: 'Stock transfers' },
   { to: '/hospital/map', label: 'Map & roads' },
 ];
 

@@ -3,6 +3,7 @@ import { SubNav } from '../../components/layout/SubNav';
 
 const TABS = [
   { to: '/coordinator', label: 'Active requests', end: true },
+  { to: '/coordinator/transport', label: 'Transport' },
   { to: '/coordinator/map', label: 'Map & roads' },
 ];
 

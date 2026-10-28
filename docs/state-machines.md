@@ -152,6 +152,23 @@ stateDiagram-v2
 
 `requested → assigned → picked_up → handed_over → completed`, or `→ failed | cancelled` (reason). `completed` requires the receiving party's confirmation. Transport state never changes request or assignment state.
 
+| Action | From | To | Actor |
+| --- | --- | --- | --- |
+| claim | requested | assigned | any coordinator (becomes assignee) |
+| picked_up | assigned | picked_up | assignee |
+| handed_over | picked_up | handed_over | assignee |
+| complete | handed_over | completed | hospital staff of the facility (receipt) |
+| fail | assigned, picked_up, handed_over | failed | assignee, facility staff, admin — note required |
+| cancel | requested, assigned | cancelled | facility staff, admin — note required |
+
 ## 10. Stock transfer request
 
 `requested → offered → dispatched → received`, or `→ declined | cancelled`. Only the requesting facility can mark `received`. Independent of blood-request closure — the hospital still confirms fulfillment separately.
+
+| Action | From | To | Side |
+| --- | --- | --- | --- |
+| offer (offeredUnits ≤ units) | requested | offered | responding |
+| decline (note) | requested | declined | responding |
+| dispatch | offered | dispatched | responding |
+| receive | dispatched | received | requesting |
+| cancel (note) | requested, offered | cancelled | requesting |

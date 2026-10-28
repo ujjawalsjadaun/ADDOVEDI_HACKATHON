@@ -7,7 +7,7 @@ import { useCoordinatorRequests } from './api';
 
 /**
  * Coordinator overview: verified, active requests across facilities — logistics only (no patient or donor
- * identity). Road reports are on the Map & roads tab; transport tasks arrive in Phase 8.
+ * identity). Road reports are on the Map & roads tab; transport tasks on the Transport tab.
  */
 export function CoordinatorRequestsPage() {
   const q = useCoordinatorRequests();
@@ -58,7 +58,6 @@ export function CoordinatorRequestsPage() {
           ))}
         </ul>
       )}
-      <p className="text-xs text-slate-500">Transport tasks arrive in a later phase.</p>
     </div>
   );
 }

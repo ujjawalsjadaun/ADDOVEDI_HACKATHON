@@ -98,6 +98,8 @@ These keep the structure predictable as phases add code:
 | `client/src/features/<area>/` | Pages (`*Page.tsx`), area-only components, and the area's API hooks (`api.ts`). An area never imports another area's internals; move shared pieces to `components/` or `lib/`. |
 | `client/src/features/requests/` | The one cross-role feature: request detail page, its panels and hooks, used by both the hospital and admin areas (`basePath` prop). What each role may do comes from the server's `allowedActions`. |
 | `client/src/features/roads/` | Cross-role feature: map page, road reports and access points, used by hospital, coordinator and admin areas. Lazy-loaded so Leaflet is a separate chunk. |
+| `client/src/features/transport/` | Cross-role feature: transport task card, request-detail panel, coordinator page. |
+| Cross-role features | `requests`, `roads`, `transport` may be used by any area and by each other; role areas (`hospital`, `donor`, `coordinator`, `admin`, `family-lead`) never import each other. |
 | `client/src/components/map/` | Area-agnostic map primitives (`MapView`). |
 | `client/src/lib/labels.ts` | Human labels and badge tones for status values, shared by all areas. |
 | `client/src/components/` | Reusable, area-agnostic UI only. |

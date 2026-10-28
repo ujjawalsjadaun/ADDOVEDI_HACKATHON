@@ -43,6 +43,8 @@ export function AuditPanel() {
             { value: 'hospital', label: 'Facilities' },
             { value: 'user', label: 'Accounts' },
             { value: 'roadReport', label: 'Road reports' },
+            { value: 'familyLead', label: 'Family leads' },
+            { value: 'stockTransfer', label: 'Stock transfers' },
           ]}
         />
         <SelectField

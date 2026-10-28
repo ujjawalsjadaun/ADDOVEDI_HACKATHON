@@ -6,6 +6,7 @@ import { formatDateTime, relativeTime } from '../../lib/format';
 import { useRequest } from './api';
 import { AssignmentsPanel } from './components/AssignmentsPanel';
 import { CandidatesPanel } from './components/CandidatesPanel';
+import { TransportPanel } from '../transport/TransportPanel';
 import { RequestActions } from './components/RequestActions';
 import { Timeline } from './components/Timeline';
 import { requestState, URGENCY_LABEL, URGENCY_TONE } from '../../lib/labels';
@@ -120,6 +121,8 @@ export function RequestDetailPage({ basePath = '/hospital/requests' }: { basePat
       <AssignmentsPanel request={r} />
 
       <CandidatesPanel request={r} />
+
+      <TransportPanel request={r} />
 
       <section className="card">
         <h3 className="mb-3 font-semibold">Timeline</h3>

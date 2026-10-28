@@ -164,10 +164,12 @@ type PublicRequestStatus =
 
 Never included: patient label/notes, units filled, donor info, phone numbers, internal IDs. Wording in the UI: "not found — check the code or report it", never "fake".
 
-### Family leads
-| `POST /family-leads` | PUB, 5/h/IP | `{ contactName, contactPhone, hospitalId, bloodGroup?, note? }` + `Idempotency-Key` → `202 { leadId, status: 'pending' }` |
-| `GET /family-leads?status=pending` | HS own facility | |
-| `POST /family-leads/:id/confirm` | HS own facility | `{ request: CreateRequest }` → creates request (still needs verification) and links lead |
+### Family leads (Phase 8)
+| Method & path | Role | Notes |
+| --- | --- | --- |
+| `POST /family-leads` | PUB, 5/h/IP and 3/h per phone | `{ hospitalId (verified), contactName, contactPhone, bloodGroup?, note? }` + `Idempotency-Key` → `202 FamilyLeadReceipt { reference: 'L-XXXXXX', status: 'pending', facilityName }`. Never creates a request or alert |
+| `GET /family-leads?status=pending|confirmed|rejected|expired` | HS own facility | `FamilyLeadView[]` (pending leads expire after 24 h; computed on read) |
+| `POST /family-leads/:id/confirm` | HS own facility | `{ request: CreateRequest }` → `201 RequestDetail`. Request creation and lead → `confirmed` happen in **one transaction**; the request is `open` and still needs verification |
 | `POST /family-leads/:id/reject` | HS own facility | `{ reason }` |
 
 ### Geo / road (Phase 7)
@@ -181,17 +183,19 @@ Never included: patient label/notes, units filled, donor info, phone numbers, in
 
 Every ETA (`EtaSnapshot`) now carries `warnings: string[]` (e.g. unconfirmed closure near the route, weather unavailable, rough straight-line guess) and a real `weatherAdjustment` band.
 
-### Transport
-| `POST /transport-tasks` | HS own facility, CO | `{ requestId, kind, pickup, dropoff, assigneeUserId? }` |
-| `GET /transport-tasks?mine=true` | CO | |
-| `POST /transport-tasks/:id/status` | CO assignee, HS own facility | `{ expectedVersion, status, note? }` |
+### Transport (Phase 8)
+| Method & path | Role | Notes |
+| --- | --- | --- |
+| `POST /transport-tasks` | HS own facility, CO, ADM | `{ requestId (verified, not closed), kind: donor_pickup|unit_transfer, assignmentId? (required for donor_pickup; must be active on the request), pickup: {label, location?}, dropoff: {label, location?}, note? }`. One open pickup per assignment |
+| `GET /transport-tasks?scope=open|mine|facility|all&requestId=` | HS (own facility), CO (open + own), ADM | `TransportTaskView[]`. Donor name/phone only for facility staff, admins and the coordinator who took the task |
+| `POST /transport-tasks/:id/status` | per action | `{ expectedVersion, action: claim|picked_up|handed_over|complete|fail|cancel, note? }` — claim: coordinator; picked_up/handed_over: assignee; complete: receiving facility staff; fail: assignee/facility/admin (note); cancel: facility/admin (note) |
 
-### Stock transfers
-| `POST /stock-transfers` | HS | `{ bloodGroup, units, relatedRequestId?, respondingFacilityId? }` + `Idempotency-Key` |
-| `GET /stock-transfers?direction=incoming|outgoing` | HS | own facility |
-| `POST /stock-transfers/:id/respond` | HS responding facility | `{ expectedVersion, decision: offer|decline, offeredUnits? }` |
-| `POST /stock-transfers/:id/dispatch` | HS responding facility | `{ expectedVersion }` |
-| `POST /stock-transfers/:id/received` | HS requesting facility | `{ expectedVersion }` |
+### Stock transfers (Phase 8)
+| Method & path | Role | Notes |
+| --- | --- | --- |
+| `POST /stock-transfers` | HS of a verified facility | `{ respondingFacilityId (verified, other), bloodGroup, units, relatedRequestId? (own facility), note? }` + `Idempotency-Key` → `201 StockTransferView` |
+| `GET /stock-transfers?direction=incoming|outgoing` | HS | own facility's side |
+| `POST /stock-transfers/:id/status` | HS of the acting side | `{ expectedVersion, action: offer (offeredUnits ≤ units) | decline (note) | dispatch | receive | cancel (note) }` — responding side offers/declines/dispatches; requesting side receives/cancels. Receiving never closes a blood request |
 
 ### Webhooks (only when a real SMS provider is configured)
 | `POST /webhooks/sms/status` | SYS, signature-verified | dedupe on `providerMessageId + status`; monotonic updates |

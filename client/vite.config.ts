@@ -15,6 +15,18 @@ export default defineConfig({
       '/socket.io': { target: API_TARGET, ws: true },
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        // Libraries change rarely: keep them in their own long-cached chunks, apart from app code.
+        manualChunks: {
+          react: ['react', 'react-dom', 'react-router'],
+          query: ['@tanstack/react-query'],
+          zod: ['zod'],
+        },
+      },
+    },
+  },
   test: {
     environment: 'jsdom',
     globals: true,

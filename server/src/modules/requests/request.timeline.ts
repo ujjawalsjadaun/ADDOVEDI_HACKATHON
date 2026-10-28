@@ -26,6 +26,20 @@ const LABELS: Record<string, string> = {
   'assignment.arrival_confirmed': 'Arrival confirmed by the hospital',
   'assignment.donated': 'Donation confirmed by the hospital',
   'assignment.no_show': 'Donor did not arrive (no-show)',
+  'lead.confirmed': 'Raised from a family lead',
+  'transport.requested': 'Transport requested',
+  'transport.assigned': 'Transport taken by a coordinator',
+  'transport.picked_up': 'Transport: picked up',
+  'transport.handed_over': 'Transport: handed over',
+  'transport.completed': 'Transport completed — receipt confirmed',
+  'transport.failed': 'Transport failed',
+  'transport.cancelled': 'Transport cancelled',
+  'transfer.requested': 'Stock requested from another facility',
+  'transfer.offered': 'Stock transfer offered',
+  'transfer.declined': 'Stock transfer declined',
+  'transfer.dispatched': 'Stock dispatched',
+  'transfer.received': 'Stock received',
+  'transfer.cancelled': 'Stock request cancelled',
 };
 
 export async function buildTimeline(requestId: Types.ObjectId): Promise<TimelineEvent[]> {

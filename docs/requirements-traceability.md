@@ -33,9 +33,9 @@ Repository is greenfield as of Phase 0, so every item starts as *missing*.
 | S3 | Rain/weather delay as configurable band | P | 7 | implemented (Phase 7) — Open-Meteo or simulated, 3 bands |
 | S4 | Configurable escalation ladder (0 / 5 / 10 / 15 min) | P | 10 | missing |
 | S5 | SMS adapter with test mode and delivery-state tracking | P | 9 | missing |
-| S6 | Hospital ↔ hospital / blood-bank stock request and transfer timeline | P | 8 | missing |
+| S6 | Hospital ↔ hospital / blood-bank stock request and transfer timeline | P | 8 | implemented (Phase 8) — request → offer → dispatch → received; no inventory feed |
 | S7 | Road closure reports with author, time, confidence, expiry, verification | P | 7 | implemented (Phase 7) |
-| S8 | Family lead stays pending until hospital confirms | P | 8 | missing |
+| S8 | Family lead stays pending until hospital confirms | P | 8 | implemented (Phase 8) |
 | S9 | No-show/decline → next-best donor; strike/review | P | 5, 10 | implemented (Phase 5) — next batch after decline/withdraw/no-show; 3 strikes → admin review |
 | S10 | Demo scenario reset (dev/demo only) | R | 12 | descoped by user (no demo scripts) |
 | S11 | Provider/queue health view | R | 9–10 | partial — admin overview (Phase 6); provider/queue health in Phase 9 |
@@ -57,7 +57,7 @@ Repository is greenfield as of Phase 0, so every item starts as *missing*.
 | C1 | Inbound YES/NO SMS webhook | P | deferred |
 | C2 | Missed-call availability | R | deferred |
 | C3 | Multilingual SMS (verified translations only) | P (future) | deferred |
-| C4 | Relay transport with multi-leg handover | P (future) | deferred |
+| C4 | Relay transport with multi-leg handover | P (future) | partial — single-leg transport tasks with handover + receipt (Phase 8); multi-leg deferred |
 | C5 | Offline queue for coordinator road reports | R | deferred |
 | C6 | "What if?" scenario simulator | R | deferred |
 | C7 | QR code for public verification URL | R | deferred |

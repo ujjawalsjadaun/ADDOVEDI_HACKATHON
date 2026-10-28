@@ -21,6 +21,9 @@ import { assignmentRoutes } from './modules/assignments/assignment.routes';
 import { dashboardRoutes } from './modules/dashboard/dashboard.routes';
 import { roadReportRoutes } from './modules/roads/roadReport.routes';
 import { geoRoutes } from './modules/geo/geo.routes';
+import { familyLeadRoutes } from './modules/leads/familyLead.routes';
+import { transportRoutes } from './modules/transport/transportTask.routes';
+import { stockTransferRoutes } from './modules/transfers/stockTransfer.routes';
 
 export interface AppDeps {
   config: Config;
@@ -74,6 +77,9 @@ export function createApp({ config, logger }: AppDeps) {
   api.use('/dashboard', dashboardRoutes());
   api.use('/road-reports', roadReportRoutes());
   api.use('/geo', geoRoutes(config));
+  api.use('/family-leads', familyLeadRoutes(config));
+  api.use('/transport-tasks', transportRoutes());
+  api.use('/stock-transfers', stockTransferRoutes());
   api.use(notFound);
 
   app.use('/api', api);

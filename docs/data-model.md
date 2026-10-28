@@ -196,18 +196,18 @@ Derived: `isStale = now ≥ expiresAt`; `affectsEta` = blocked ∧ ¬stale ∧ �
 
 ## familyLeads
 
-`{ contactName, contactPhone, hospitalId, bloodGroup?, note (≤280), status: pending|confirmed|rejected|expired, linkedRequestId?, decidedBy, decidedAt, reason, expiresAt }`
-Indexes: `{ hospitalId: 1, status: 1 }`; `{ contactPhone: 1, createdAt: -1 }` (rate limiting / duplicate leads).
+`{ reference (unique, 'L-XXXXXX'), hospitalId, contactName, contactPhone, bloodGroup?, note (≤280), status: pending|confirmed|rejected|expired, linkedRequestId?, decidedBy, decidedAt, reason, expiresAt (24 h) }`
+Indexes: `{ reference: 1 }` unique; `{ hospitalId: 1, status: 1, createdAt: -1 }`; `{ contactPhone: 1, createdAt: -1 }` (3 leads/hour per phone). A pending lead past `expiresAt` is treated as expired on read.
 
 ## transportTasks
 
-`{ requestId, assignmentId?, kind: donor_pickup|unit_transfer, pickup: {label, location}, dropoff: {label, location}, assigneeUserId (coordinator), status, statusHistory: [{status, by, at, note}] (bounded), version }`
-Indexes: `{ assigneeUserId: 1, status: 1 }`; `{ requestId: 1 }`.
+`{ requestId, facilityId, assignmentId?, kind: donor_pickup|unit_transfer, pickup: {label, location?}, dropoff: {label, location?}, assigneeUserId?, status, open, note, history: [{status, by, at, note}] (last 20), createdBy, version }`
+Indexes: `{ assignmentId: 1 }` unique partial `{ open: true, assignmentId: objectId }` (one open pickup per donor assignment); `{ status: 1, createdAt: 1 }`; `{ assigneeUserId: 1, open: 1 }`; `{ facilityId: 1, open: 1 }`; `{ requestId: 1 }`.
 
 ## stockTransfers
 
-`{ requestingFacilityId, respondingFacilityId?, relatedRequestId?, bloodGroup, units, status: requested|offered|dispatched|received|declined|cancelled, offeredUnits, history: [{status, by, at, note}] (bounded), version }`
-Indexes: `{ requestingFacilityId: 1, status: 1 }`; `{ respondingFacilityId: 1, status: 1 }`.
+`{ requestingFacilityId, respondingFacilityId, relatedRequestId?, bloodGroup, units, offeredUnits?, status: requested|offered|dispatched|received|declined|cancelled, note, history: [{status, by, at, note}] (last 20), createdBy, version }`
+Indexes: `{ requestingFacilityId: 1, status: 1, createdAt: -1 }`; `{ respondingFacilityId: 1, status: 1, createdAt: -1 }`.
 
 ## suspiciousReports
 

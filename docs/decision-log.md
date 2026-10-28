@@ -63,6 +63,11 @@ Each entry: decision, why, and whether it needs review by a domain partner befor
 | D-51 | 2026-10-29 | Map uses OpenStreetMap tiles via Leaflet `CircleMarker`s (no image assets); donor locations are never sent to any map. Map pages are lazy-loaded. | Privacy (security.md §5) and bundle size. | — |
 | D-52 | 2026-10-29 | Vehicle access point is a single manually set point per facility (hospital staff of that facility, coordinators, admins), audited. | Pitch "nearest ambulance-accessible point" without claiming survey data. | — |
 
+| D-53 | 2026-10-29 | Family leads target one verified facility, carry only contact + optional blood group/note, expire after 24 h, and are limited to 5/h per IP and 3/h per phone. Confirming creates the request and links the lead in one transaction (`createRequest` gained an in-transaction hook); the request still needs verification. No OTP yet (D-18). | Pitch: family leads stay pending until the hospital confirms; never alert donors. | Partner review |
+| D-54 | 2026-10-29 | Transport tasks are claimed by any coordinator; donor contact is revealed to a coordinator only after they claim the task; completion requires the receiving facility. One open pickup per donor assignment (partial unique index). Transport events appear on the request timeline but never change request/assignment state. | Least-privilege logistics; blueprint Phase 8 invariant. | Partner review |
+| D-55 | 2026-10-29 | Stock transfers are point-to-point (one target facility), with no live inventory feed; the target confirms what it can send. Receiving units never closes a blood request. | Pitch "coordinate stock requests" without claiming inventory integration. | — |
+| D-56 | 2026-10-29 | The official request form is one shared component used by "New request" and "Confirm family lead". Client vendor libraries are split into cached chunks (react, query, zod). | Same validation everywhere; bundle size under the warning limit. | — |
+
 ## Open questions (non-blocking; defaults above apply)
 
 1. Should a hospital be able to confirm fulfillment with fewer units than requested (partial)? Default: yes, `unitsReceived` recorded.

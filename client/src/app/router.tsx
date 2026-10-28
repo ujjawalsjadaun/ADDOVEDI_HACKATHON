@@ -11,6 +11,10 @@ import { HospitalPage } from '../features/hospital/HospitalPage';
 import { HospitalDashboardPage } from '../features/hospital/HospitalDashboardPage';
 import { RequestsListPage } from '../features/hospital/RequestsListPage';
 import { NewRequestPage } from '../features/hospital/NewRequestPage';
+import { FamilyLeadsPage } from '../features/hospital/FamilyLeadsPage';
+import { StockTransfersPage } from '../features/hospital/StockTransfersPage';
+import { FamilyLeadPage } from '../features/family-lead/FamilyLeadPage';
+import { CoordinatorTransportPage } from '../features/transport/CoordinatorTransportPage';
 import { DonorPage } from '../features/donor/DonorPage';
 import { DonorHomePage } from '../features/donor/DonorHomePage';
 import { DonorProfilePage } from '../features/donor/DonorProfilePage';
@@ -37,6 +41,7 @@ export const routes: RouteObject[] = [
       { path: 'register', element: <RegisterDonorPage /> },
       { path: 'check', element: <CheckerPage /> },
       { path: 'check/:code', element: <CheckerPage /> },
+      { path: 'help', element: <FamilyLeadPage /> },
       {
         path: 'hospital',
         element: (
@@ -49,6 +54,8 @@ export const routes: RouteObject[] = [
           { path: 'requests', element: <RequestsListPage /> },
           { path: 'requests/new', element: <NewRequestPage /> },
           { path: 'requests/:id', element: <RequestDetailPage basePath="/hospital/requests" /> },
+          { path: 'leads', element: <FamilyLeadsPage /> },
+          { path: 'transfers', element: <StockTransfersPage /> },
           { path: 'map', lazy: loadRoadMap },
           { path: '*', element: <NotFoundPage /> },
         ],
@@ -75,6 +82,7 @@ export const routes: RouteObject[] = [
         ),
         children: [
           { index: true, element: <CoordinatorRequestsPage /> },
+          { path: 'transport', element: <CoordinatorTransportPage /> },
           { path: 'map', lazy: loadRoadMap },
           { path: '*', element: <NotFoundPage /> },
         ],
