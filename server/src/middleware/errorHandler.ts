@@ -13,7 +13,26 @@ function toAppError(err: unknown): AppError {
   const e = err as { type?: string; status?: number };
   if (e?.type === 'entity.parse.failed') return new AppError('BAD_REQUEST', 'Request body is not valid JSON.');
   if (e?.type === 'entity.too.large') return new AppError('BAD_REQUEST', 'Request body is too large.');
+  if (isDbUnavailable(err)) {
+    return new AppError('SERVICE_UNAVAILABLE', 'The database is unavailable. Nothing was saved — please try again.', { cause: err });
+  }
   return new AppError('INTERNAL', 'Something went wrong. Please try again.', { cause: err });
+}
+
+const DB_UNAVAILABLE_ERRORS = new Set([
+  'MongoServerSelectionError',
+  'MongooseServerSelectionError',
+  'MongoNetworkError',
+  'MongoNetworkTimeoutError',
+  'MongoNotConnectedError',
+  'MongoTopologyClosedError',
+]);
+
+function isDbUnavailable(err: unknown): boolean {
+  if (!(err instanceof Error)) return false;
+  if (DB_UNAVAILABLE_ERRORS.has(err.name)) return true;
+  // Mongoose with bufferCommands=false while disconnected.
+  return err.name === 'MongooseError' && /initial connection|buffering timed out|not connected/i.test(err.message);
 }
 
 export function errorHandler(logger: Logger, exposeInternals: boolean): ErrorRequestHandler {

@@ -1,13 +1,18 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import cookieParser from 'cookie-parser';
 import { pinoHttp } from 'pino-http';
 import type { Logger } from 'pino';
 import type { Config } from './config/env';
 import { requestId } from './middleware/requestId';
 import { requireJson } from './middleware/requireJson';
 import { errorHandler, notFound } from './middleware/errorHandler';
+import { authenticate } from './middleware/authenticate';
 import { healthRoutes } from './modules/health/health.routes';
+import { authRoutes } from './modules/auth/auth.routes';
+import { publicHospitalRoutes } from './modules/hospitals/hospital.routes';
+import { adminRoutes } from './modules/admin/admin.routes';
 
 export interface AppDeps {
   config: Config;
@@ -45,7 +50,13 @@ export function createApp({ config, logger }: AppDeps) {
   const api = express.Router();
   api.use(requireJson);
   api.use(express.json({ limit: '50kb' }));
+  // Health stays outside authentication so it works even when the database is down.
   api.use('/health', healthRoutes(config));
+  api.use(cookieParser());
+  api.use(authenticate(config));
+  api.use('/auth', authRoutes(config, logger));
+  api.use('/hospitals', publicHospitalRoutes());
+  api.use('/admin', adminRoutes());
   api.use(notFound);
 
   app.use('/api', api);

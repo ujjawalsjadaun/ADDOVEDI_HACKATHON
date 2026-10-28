@@ -1,0 +1,71 @@
+import { z } from 'zod';
+import { FACILITY_TYPES, HOSPITAL_VERIFICATION_STATUSES, USER_ROLES, USER_STATUSES, type UserRole } from '../enums';
+import { emailSchema, passwordSchema } from './auth';
+import { latLngSchema, objectIdSchema, paginationQuerySchema, phoneSchema, reasonSchema } from './common';
+
+// ── Hospitals ────────────────────────────────────────────────────────────────
+
+export const createHospitalSchema = z.object({
+  name: z.string().trim().min(3).max(120),
+  facilityType: z.enum(FACILITY_TYPES),
+  district: z.string().trim().min(2).max(80),
+  address: z.string().trim().min(5).max(300),
+  location: latLngSchema,
+  registeredPhone: phoneSchema,
+});
+export type CreateHospitalInput = z.infer<typeof createHospitalSchema>;
+
+export const HOSPITAL_DECISIONS = ['verified', 'rejected', 'suspended'] as const;
+export const hospitalDecisionSchema = z.object({
+  decision: z.enum(HOSPITAL_DECISIONS),
+  reason: reasonSchema,
+});
+export type HospitalDecisionInput = z.infer<typeof hospitalDecisionSchema>;
+
+export const listHospitalsQuerySchema = paginationQuerySchema.extend({
+  verificationStatus: z.enum(HOSPITAL_VERIFICATION_STATUSES).optional(),
+});
+
+export const publicHospitalsQuerySchema = z.object({
+  district: z.string().trim().max(80).optional(),
+});
+
+// ── Users ────────────────────────────────────────────────────────────────────
+
+/** Roles an admin may provision. Donors self-register (Phase 5). */
+export const PROVISIONABLE_ROLES = ['hospital_staff', 'coordinator', 'admin'] as const satisfies readonly UserRole[];
+
+export const createUserSchema = z
+  .object({
+    name: z.string().trim().min(2).max(100),
+    email: emailSchema,
+    password: passwordSchema,
+    role: z.enum(PROVISIONABLE_ROLES),
+    phone: phoneSchema.optional(),
+    facilityId: objectIdSchema.optional(),
+    canVerifyRequests: z.boolean().default(false),
+  })
+  .superRefine((u, ctx) => {
+    if (u.role === 'hospital_staff' && !u.facilityId) {
+      ctx.addIssue({ code: 'custom', path: ['facilityId'], message: 'hospital staff must belong to a facility' });
+    }
+    if (u.role !== 'hospital_staff' && u.facilityId) {
+      ctx.addIssue({ code: 'custom', path: ['facilityId'], message: 'only hospital staff belong to a facility' });
+    }
+    if (u.role !== 'hospital_staff' && u.canVerifyRequests) {
+      ctx.addIssue({ code: 'custom', path: ['canVerifyRequests'], message: 'only hospital staff can verify requests' });
+    }
+  });
+export type CreateUserInput = z.infer<typeof createUserSchema>;
+
+export const userStatusSchema = z.object({
+  status: z.enum(USER_STATUSES),
+  reason: reasonSchema,
+});
+export type UserStatusInput = z.infer<typeof userStatusSchema>;
+
+export const listUsersQuerySchema = paginationQuerySchema.extend({
+  role: z.enum(USER_ROLES).optional(),
+  status: z.enum(USER_STATUSES).optional(),
+  facilityId: objectIdSchema.optional(),
+});

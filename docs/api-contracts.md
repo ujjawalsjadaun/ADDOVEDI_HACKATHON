@@ -68,9 +68,9 @@ Role key: **PUB** public · **ADM** admin · **HS** hospital staff · **HV** hos
 | Method & path | Role | Body → Response |
 | --- | --- | --- |
 | `POST /auth/login` | PUB (rate-limited) | `{ email, password }` → `{ user: SafeUser }` + cookie. Generic `401` on any failure. |
-| `POST /auth/logout` | any authed | clears cookie, `tokenVersion += 1` |
+| `POST /auth/logout` | anyone | idempotent `200 { loggedOut: true }`; clears cookie; when signed in, `tokenVersion += 1` (signs out every session of that user) |
 | `GET /auth/me` | any authed | `{ user: SafeUser, facility?: FacilitySummary }` |
-| `POST /auth/register-donor` | PUB (rate-limited) | `{ name, email, password, phone, bloodGroup, consent }` → donor account, profile `unverified` |
+| `POST /auth/register-donor` | PUB (rate-limited) | `{ name, email, password, phone, bloodGroup, consent }` → donor account, profile `unverified` — **Phase 5** (with donor profiles) |
 
 `SafeUser = { id, name, email, role, facilityId?, canVerifyRequests, status }`.
 
@@ -80,8 +80,9 @@ Role key: **PUB** public · **ADM** admin · **HS** hospital staff · **HV** hos
 | `GET /admin/hospitals?verificationStatus=` | ADM | list |
 | `POST /admin/hospitals` | ADM | create facility (`pending`) |
 | `POST /admin/hospitals/:id/verification` | ADM | `{ decision: verified|rejected|suspended, reason }` |
-| `POST /admin/users` | ADM | provision hospital staff / coordinator / admin (no public signup for these) |
-| `POST /admin/users/:id/status` | ADM | `{ status: active|paused|suspended, reason }`; suspend bumps `tokenVersion` |
+| `GET /admin/users?role=&status=&facilityId=` | ADM | paginated `UserAdmin[]` (phone masked) |
+| `POST /admin/users` | ADM | `{ name, email, password, role: hospital_staff|coordinator|admin, phone?, facilityId?, canVerifyRequests }` — staff require `facilityId`; only staff may have `canVerifyRequests`. `409 CONFLICT` on duplicate email. No public sign-up for these roles; the first admin comes from `npm run create-admin -w server` |
+| `POST /admin/users/:id/status` | ADM | `{ status: active|paused|suspended, reason }`; pause/suspend bumps `tokenVersion` (signs the user out everywhere); an admin cannot change their own status |
 | `POST /admin/donors/:userId/verification` | ADM | `{ decision: verified|unverified, reason }` |
 | `POST /admin/donors/:userId/review` | ADM | `{ decision: ok|under_review, reason }` (strikes) |
 | `GET /admin/audit?resourceType=&resourceId=&action=&from=&to=` | ADM | paginated |

@@ -43,17 +43,21 @@ export async function api<T>(path: string, options: ApiOptions = {}): Promise<Ap
   const timer = setTimeout(() => timeout.abort(), options.timeoutMs ?? DEFAULT_TIMEOUT_MS);
   const signal = options.signal ? AbortSignal.any([options.signal, timeout.signal]) : timeout.signal;
 
+  const method = options.method ?? 'GET';
+  // The API only accepts JSON mutations (CSRF defence), so bodiless mutations send `{}`.
+  const requestBody = method === 'GET' ? undefined : JSON.stringify(options.body ?? {});
+
   let res: Response;
   try {
     res = await fetch(`${BASE_URL}${path}`, {
-      method: options.method ?? 'GET',
+      method,
       credentials: 'include',
       headers: {
         Accept: 'application/json',
-        ...(options.body !== undefined && { 'Content-Type': 'application/json' }),
+        ...(requestBody !== undefined && { 'Content-Type': 'application/json' }),
         ...options.headers,
       },
-      body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+      body: requestBody,
       signal,
     });
   } catch (err) {

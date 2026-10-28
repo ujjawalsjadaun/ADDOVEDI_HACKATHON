@@ -27,6 +27,12 @@ Each entry: decision, why, and whether it needs review by a domain partner befor
 | D-20 | 2026-10-29 | Server starts even if the first DB connection fails, reports `degraded`, and retries every 15 s; mutations fail closed. | Hosts restart before Atlas is reachable; health must be truthful rather than the process crash-looping. | — |
 | D-21 | 2026-10-29 | `shared` is consumed as TypeScript source (no build step); the server bundle (`tsup`) inlines it, Vite compiles it for the client. | Keeps contracts in one place without a separate build/watch step. | — |
 
+| D-22 | 2026-10-29 | Indexes are ensured automatically after the API connects (and by `npm run db:indexes`), instead of only by a manual command. | Unique constraints such as one-account-per-email must exist before the first write; `createIndexes` is additive and idempotent. | — |
+| D-23 | 2026-10-29 | Login returns the same `401 "Email or password is incorrect."` for unknown email, wrong password and paused/suspended accounts; the real reason is audited (`auth.login_failed`, email stored only as an HMAC). | Prevents account enumeration (security.md §2). | — |
+| D-24 | 2026-10-29 | First administrator is created with the interactive `npm run create-admin -w server` command; no seed/demo data is shipped (user instruction: no demo scripts). | Bootstrapping without public admin sign-up. | — |
+| D-25 | 2026-10-29 | An admin cannot change their own account status. | Prevents locking out the last administrator by accident. | — |
+| D-26 | 2026-10-29 | No automated tests are written or run from Phase 3 onward (user instruction); each phase is verified with typecheck, lint, build and manual API checks recorded in the phase summary. Existing Phase 2 test files are left untouched. | User's scope decision for the hackathon. | — |
+
 ## Open questions (non-blocking; defaults above apply)
 
 1. Should a hospital be able to confirm fulfillment with fewer units than requested (partial)? Default: yes, `unitsReceived` recorded.

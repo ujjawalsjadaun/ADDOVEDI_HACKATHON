@@ -1,15 +1,9 @@
 import { useState } from 'react';
-import { NavLink, Outlet, useLocation } from 'react-router';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router';
 import { OfflineBanner } from './OfflineBanner';
 import { ApiStatus } from './ApiStatus';
-
-const NAV = [
-  { to: '/check', label: 'Is this real?' },
-  { to: '/hospital', label: 'Hospital' },
-  { to: '/donor', label: 'Donor' },
-  { to: '/coordinator', label: 'Coordinator' },
-  { to: '/admin', label: 'Admin' },
-];
+import { useLogout, useMe } from '../../features/auth/api';
+import { ROLE_HOME, ROLE_LABEL } from '../../features/auth/roleHome';
 
 function navClass({ isActive }: { isActive: boolean }) {
   return `block rounded-md px-3 py-2 text-sm font-medium ${
@@ -20,6 +14,16 @@ function navClass({ isActive }: { isActive: boolean }) {
 export function AppLayout() {
   const [menuOpen, setMenuOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+  const me = useMe();
+  const logout = useLogout();
+  const session = me.data;
+  // Public checker for everyone; the signed-in user's own area; nothing else to dead-end in.
+  const nav = [
+    { to: '/check', label: 'Is this real?' },
+    ...(session ? [{ to: ROLE_HOME[session.user.role], label: ROLE_LABEL[session.user.role] }] : []),
+  ];
+  const onLogout = () => logout.mutate(undefined, { onSettled: () => navigate('/', { replace: true }) });
   const [lastPath, setLastPath] = useState(location.pathname);
   if (lastPath !== location.pathname) {
     // Close the mobile menu after navigating.
@@ -50,9 +54,9 @@ export function AppLayout() {
           >
             Menu
           </button>
-          <nav aria-label="Primary" className="hidden md:block">
+          <nav aria-label="Primary" className="hidden items-center gap-3 md:flex">
             <ul className="flex gap-1">
-              {NAV.map((item) => (
+              {nav.map((item) => (
                 <li key={item.to}>
                   <NavLink to={item.to} className={navClass}>
                     {item.label}
@@ -60,12 +64,13 @@ export function AppLayout() {
                 </li>
               ))}
             </ul>
+            <SessionControls name={session?.user.name} pending={logout.isPending} onLogout={onLogout} />
           </nav>
         </div>
         {menuOpen && (
           <nav id="primary-nav" aria-label="Primary" className="border-t border-slate-200 px-4 py-2 md:hidden">
             <ul className="flex flex-col gap-1">
-              {NAV.map((item) => (
+              {nav.map((item) => (
                 <li key={item.to}>
                   <NavLink to={item.to} className={navClass}>
                     {item.label}
@@ -73,6 +78,9 @@ export function AppLayout() {
                 </li>
               ))}
             </ul>
+            <div className="mt-2 border-t border-slate-200 pt-2">
+              <SessionControls name={session?.user.name} pending={logout.isPending} onLogout={onLogout} />
+            </div>
           </nav>
         )}
       </header>
@@ -89,6 +97,24 @@ export function AppLayout() {
           </p>
         </div>
       </footer>
+    </div>
+  );
+}
+
+function SessionControls({ name, pending, onLogout }: { name?: string; pending: boolean; onLogout: () => void }) {
+  if (!name) {
+    return (
+      <NavLink to="/login" className="btn-secondary">
+        Sign in
+      </NavLink>
+    );
+  }
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-sm text-slate-600">{name}</span>
+      <button type="button" className="btn-secondary" onClick={onLogout} disabled={pending}>
+        {pending ? 'Signing out…' : 'Sign out'}
+      </button>
     </div>
   );
 }

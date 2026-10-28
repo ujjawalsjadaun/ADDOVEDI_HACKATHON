@@ -1,5 +1,9 @@
 import mongoose from 'mongoose';
 
+// Fail fast instead of queueing queries for 10 s while the database is down; the error
+// handler maps the resulting error to 503 so nothing is falsely acknowledged.
+mongoose.set('bufferCommands', false);
+
 export async function connectDb(uri: string): Promise<typeof mongoose> {
   mongoose.set('strictQuery', true);
   return mongoose.connect(uri, {

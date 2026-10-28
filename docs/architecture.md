@@ -63,7 +63,8 @@ REST is authoritative. Socket.IO only signals "something changed"; clients refet
 │  │  ├─ providers/        routing/, weather/, sms/ — interface + simulated + real impls
 │  │  ├─ realtime/         Socket.IO auth + room policy + emit helpers
 │  │  ├─ workers/          outboxWorker, escalationWorker, expiryWorker
-│  │  └─ scripts/          seed.ts, ensure-indexes.ts
+│  │  ├─ types/            Express type augmentation (res.locals.user, requestId)
+│  │  └─ scripts/          operator commands: createAdmin.ts, ensureIndexes.ts (+ cli.ts helpers)
 │  └─ test/                unit/, integration/, concurrency/ (Vitest + Supertest + mongodb-memory-server replset)
 ├─ client/
 │  └─ src/

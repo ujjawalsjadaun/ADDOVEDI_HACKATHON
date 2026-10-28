@@ -2,7 +2,7 @@
 
 **Phase:** 1 · MongoDB via Mongoose. All collections have `createdAt`/`updatedAt` (Mongoose timestamps), stored in UTC and displayed in `Asia/Kolkata`. Coordinates are GeoJSON `Point` (`[lng, lat]` order).
 
-Indexes are declared in schemas and created explicitly by `npm run db:indexes` (`autoIndex` off outside tests). Index creation is idempotent; no command drops indexes.
+Indexes are declared in schemas (`autoIndex` is off) and created by `ensureIndexes()` — automatically after the API connects, and on demand with `npm run db:indexes -w server`. Every model must be registered in `server/src/modules/models.ts`. Index creation is idempotent and additive; nothing drops indexes.
 
 ## users
 

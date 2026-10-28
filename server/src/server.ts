@@ -3,6 +3,7 @@ import { createServer } from 'node:http';
 import { ConfigError, loadConfig, type Config } from './config/env';
 import { createLogger } from './lib/logger';
 import { connectDb, disconnectDb } from './lib/db';
+import { ensureIndexes } from './lib/indexes';
 import { createApp } from './app';
 
 if (existsSync('.env')) process.loadEnvFile('.env');
@@ -35,6 +36,14 @@ async function connectWithRetry(): Promise<void> {
   } catch (err) {
     logger.error({ err: (err as Error).message }, `database connection failed — degraded mode, retrying in ${DB_RETRY_MS / 1000}s`);
     dbRetryTimer = setTimeout(() => void connectWithRetry(), DB_RETRY_MS);
+    return;
+  }
+  try {
+    // Additive and idempotent; guarantees unique constraints (e.g. one account per email) exist.
+    await ensureIndexes();
+    logger.info('database indexes ensured');
+  } catch (err) {
+    logger.error({ err: (err as Error).message }, 'index creation failed — run `npm run db:indexes -w server` after fixing');
   }
 }
 await connectWithRetry();

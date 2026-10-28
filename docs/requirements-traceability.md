@@ -8,8 +8,8 @@ Repository is greenfield as of Phase 0, so every item starts as *missing*.
 
 | ID | Requirement | Src | Priority | Phase | Status |
 | --- | --- | --- | --- | --- | --- |
-| M1 | Hospital/staff login with backend role authorization | P | Must | 3 | missing |
-| M2 | Admin-controlled hospital/facility verification | P | Must | 3–4 | missing |
+| M1 | Hospital/staff login with backend role authorization | P | Must | 3 | implemented (Phase 3) |
+| M2 | Admin-controlled hospital/facility verification | P | Must | 3–4 | implemented (Phase 3) |
 | M3 | Hospital-created blood request (group, units, facility, urgency, deadline, safe patient ref, idempotency key) | P | Must | 4 | missing |
 | M4 | Request verification separate from creation | P | Must | 4 | missing |
 | M5 | Public "Is this real?" checker with minimal disclosure | P | Must | 4 | missing |
@@ -18,10 +18,10 @@ Repository is greenfield as of Phase 0, so every item starts as *missing*.
 | M8 | Donor accept/decline with atomic single-claim assignment | R | Must | 5 | missing |
 | M9 | Request timeline (requested → verified → alerted → accepted → en route → arrived → fulfilled → closed) and hospital-confirmed fulfillment | P | Must | 4–6 | missing |
 | M10 | Duplicate protection: idempotency, one active request per patient, similarity flag, human review | P | Must | 4 | missing |
-| M11 | Audit events for critical/admin actions | P | Must | 4–10 | missing |
-| M12 | Dashboards for hospital, donor, admin/coordinator | R | Must | 6 | missing |
+| M11 | Audit events for critical/admin actions | P | Must | 4–10 | partial — auth, facility and account decisions audited |
+| M12 | Dashboards for hospital, donor, admin/coordinator | R | Must | 6 | partial — admin facilities + staff screens |
 | M13 | Manual fallback when route/weather/SMS provider is down | P | Must | 7, 9 | missing |
-| M14 | Synthetic seed data and automated happy-path/failure tests | R | Must | 2–11 | missing |
+| M14 | Synthetic seed data and automated happy-path/failure tests | R | Must | 2–11 | descoped by user (D-26): no tests or demo scripts |
 | M15 | "Demo/simulated" labels on simulated provider results | R | Must | 7, 9, 12 | missing |
 
 ## Should Have
@@ -37,18 +37,18 @@ Repository is greenfield as of Phase 0, so every item starts as *missing*.
 | S7 | Road closure reports with author, time, confidence, expiry, verification | P | 7 | missing |
 | S8 | Family lead stays pending until hospital confirms | P | 8 | missing |
 | S9 | No-show/decline → next-best donor; strike/review | P | 5, 10 | missing |
-| S10 | Demo scenario reset (dev/demo only) | R | 12 | missing |
+| S10 | Demo scenario reset (dev/demo only) | R | 12 | descoped by user (no demo scripts) |
 | S11 | Provider/queue health view | R | 9–10 | missing |
 
 ## Abuse controls (pitch-confirmed)
 
 | ID | Requirement | Phase | Status |
 | --- | --- | --- | --- |
-| A1 | Rate limits on login, public checker, leads, webhooks | 3, 10 | missing |
+| A1 | Rate limits on login, public checker, leads, webhooks | 3, 10 | partial — login (10 / 15 min per IP+email) |
 | A2 | Cooldowns and one active request per patient | 4–5 | missing |
-| A3 | Strikes, account pause/review | 10 | missing |
+| A3 | Strikes, account pause/review | 10 | partial — admin pause/suspend with session revocation |
 | A4 | Suspicious-request reports | 4, 10 | missing |
-| A5 | Audit trail | 4–10 | missing |
+| A5 | Audit trail | 4–10 | partial |
 
 ## Could Have / future (pitch marks several as planned)
 

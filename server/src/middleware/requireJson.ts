@@ -12,7 +12,9 @@ export const requireJson: RequestHandler = (req, _res, next) => {
   if (!MUTATING.has(req.method)) return next();
   const hasBody = Number(req.get('content-length') ?? 0) > 0 || req.get('transfer-encoding') !== undefined;
   if (!hasBody && req.method === 'DELETE') return next();
-  if (!req.is('application/json')) {
+  // req.is() returns null when there is no body, so check the header for bodiless requests.
+  const isJson = hasBody ? !!req.is('application/json') : /^application\/json\b/i.test(req.get('content-type') ?? '');
+  if (!isJson) {
     return next(new AppError('UNSUPPORTED_MEDIA_TYPE', 'Requests must use Content-Type: application/json.'));
   }
   next();
