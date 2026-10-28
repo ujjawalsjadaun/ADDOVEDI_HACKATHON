@@ -1,0 +1,72 @@
+# Requirements Traceability — Golden Hour (PS-04)
+
+Status values: **missing** (not built), **partial**, **implemented**, **deferred**.
+Source: **P** = pitch-confirmed, **R** = blueprint recommendation.
+Repository is greenfield as of Phase 0, so every item starts as *missing*.
+
+## Must Have
+
+| ID | Requirement | Src | Priority | Phase | Status |
+| --- | --- | --- | --- | --- | --- |
+| M1 | Hospital/staff login with backend role authorization | P | Must | 3 | missing |
+| M2 | Admin-controlled hospital/facility verification | P | Must | 3–4 | missing |
+| M3 | Hospital-created blood request (group, units, facility, urgency, deadline, safe patient ref, idempotency key) | P | Must | 4 | missing |
+| M4 | Request verification separate from creation | P | Must | 4 | missing |
+| M5 | Public "Is this real?" checker with minimal disclosure | P | Must | 4 | missing |
+| M6 | Donor profile: consent, blood group, coarse location, availability, last donation date, cooldown | P | Must | 5 | missing |
+| M7 | Matching: compatibility, 90-day rest period, availability, skip recently contacted, ETA ranking | P | Must | 5 | missing |
+| M8 | Donor accept/decline with atomic single-claim assignment | R | Must | 5 | missing |
+| M9 | Request timeline (requested → verified → alerted → accepted → en route → arrived → fulfilled → closed) and hospital-confirmed fulfillment | P | Must | 4–6 | missing |
+| M10 | Duplicate protection: idempotency, one active request per patient, similarity flag, human review | P | Must | 4 | missing |
+| M11 | Audit events for critical/admin actions | P | Must | 4–10 | missing |
+| M12 | Dashboards for hospital, donor, admin/coordinator | R | Must | 6 | missing |
+| M13 | Manual fallback when route/weather/SMS provider is down | P | Must | 7, 9 | missing |
+| M14 | Synthetic seed data and automated happy-path/failure tests | R | Must | 2–11 | missing |
+| M15 | "Demo/simulated" labels on simulated provider results | R | Must | 7, 9, 12 | missing |
+
+## Should Have
+
+| ID | Requirement | Src | Phase | Status |
+| --- | --- | --- | --- | --- |
+| S1 | Leaflet map (hospitals, coarse donor markers, ambulance-accessible point) | P | 7 | missing |
+| S2 | Road ETA with timeout, cache, freshness label; labelled straight-line fallback | P | 7 | missing |
+| S3 | Rain/weather delay as configurable band | P | 7 | missing |
+| S4 | Configurable escalation ladder (0 / 5 / 10 / 15 min) | P | 10 | missing |
+| S5 | SMS adapter with test mode and delivery-state tracking | P | 9 | missing |
+| S6 | Hospital ↔ hospital / blood-bank stock request and transfer timeline | P | 8 | missing |
+| S7 | Road closure reports with author, time, confidence, expiry, verification | P | 7 | missing |
+| S8 | Family lead stays pending until hospital confirms | P | 8 | missing |
+| S9 | No-show/decline → next-best donor; strike/review | P | 5, 10 | missing |
+| S10 | Demo scenario reset (dev/demo only) | R | 12 | missing |
+| S11 | Provider/queue health view | R | 9–10 | missing |
+
+## Abuse controls (pitch-confirmed)
+
+| ID | Requirement | Phase | Status |
+| --- | --- | --- | --- |
+| A1 | Rate limits on login, public checker, leads, webhooks | 3, 10 | missing |
+| A2 | Cooldowns and one active request per patient | 4–5 | missing |
+| A3 | Strikes, account pause/review | 10 | missing |
+| A4 | Suspicious-request reports | 4, 10 | missing |
+| A5 | Audit trail | 4–10 | missing |
+
+## Could Have / future (pitch marks several as planned)
+
+| ID | Requirement | Src | Status |
+| --- | --- | --- | --- |
+| C1 | Inbound YES/NO SMS webhook | P | deferred |
+| C2 | Missed-call availability | R | deferred |
+| C3 | Multilingual SMS (verified translations only) | P (future) | deferred |
+| C4 | Relay transport with multi-leg handover | P (future) | deferred |
+| C5 | Offline queue for coordinator road reports | R | deferred |
+| C6 | "What if?" scenario simulator | R | deferred |
+| C7 | QR code for public verification URL | R | deferred |
+| C8 | AI-assisted intake (draft only, hospital confirms) | P (future) | deferred |
+| C9 | WhatsApp channel | P (future) | deferred |
+| C10 | Live blood-bank stock integration | P (future) | deferred |
+| C11 | 108 ambulance integration | P (future) | deferred — needs formal authorization |
+| C12 | Village anchors / verified local coordinators | P (future) | deferred — needs partnership onboarding |
+
+## Won't Have (first MVP)
+
+AI deciding urgency or eligibility; autonomous ambulance dispatch; unverified road closures shown as authoritative; public donor directory; auto-rejecting duplicates by score; real patient/donor data; microservices/Kubernetes; zero-signal operation claims.
