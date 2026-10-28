@@ -69,6 +69,8 @@ const bloodRequestSchema = new Schema(
     },
     /** Donor alert batches sent so far (verification sends batch 0). */
     alertBatches: { type: Number, default: 0 },
+    /** Set by an administrator (e.g. after suspicious reports): public checker shows "under review"; alerts pause. */
+    review: { type: decisionSchema, default: null },
     /** Last escalation-ladder step executed (Phase 10). */
     escalationStep: { type: Number, default: -1 },
     /** Optimistic concurrency: every transition matches on and increments this. */

@@ -34,6 +34,8 @@ export function toRequestSummary(doc: BloodRequestDocument, facilityName: string
     requestStatus: doc.requestStatus,
     duplicateReviewStatus: doc.duplicateReview.status,
     closureReason: doc.closure?.reason ?? null,
+    escalationStep: doc.escalationStep ?? -1,
+    underReview: !!doc.review,
     createdAt: (doc.get('createdAt') as Date).toISOString(),
     version: doc.version,
   };
@@ -89,6 +91,7 @@ export function toRequestDetail(
           unitsReceived: doc.closure.unitsReceived ?? null,
         }
       : null,
+    review: doc.review ? { reason: doc.review.reason ?? '', by: name(doc.review.by), at: doc.review.at.toISOString() } : null,
     verifiedAt: iso(doc.verifiedAt),
     timeline: extra.timeline,
     allowedActions: extra.allowedActions,
@@ -108,6 +111,9 @@ export function toPublicStatus(doc: BloodRequestDocument, facility: HospitalDocu
       expired: 'closed_expired',
       rejected: 'rejected',
     }[doc.closure?.reason ?? 'cancelled'] as typeof status;
+  } else if (doc.review) {
+    // An administrator is checking this request: tell the public not to act on it yet.
+    status = 'under_review';
   } else if (doc.verificationStatus === 'verified') {
     status = 'verified_active';
   } else {
@@ -119,7 +125,7 @@ export function toPublicStatus(doc: BloodRequestDocument, facility: HospitalDocu
     facilityName: facility.name,
     district: facility.district,
     bloodGroup: doc.bloodGroup,
-    deadlineAt: status === 'verified_active' || status === 'pending_verification' ? doc.deadlineAt.toISOString() : null,
+    deadlineAt: status === 'verified_active' || status === 'pending_verification' || status === 'under_review' ? doc.deadlineAt.toISOString() : null,
     updatedAt: (doc.get('updatedAt') as Date).toISOString(),
   };
 }

@@ -84,7 +84,8 @@ Indexes: `{ userId: 1 }` unique; `{ bloodGroup: 1, availability: 1, verification
 | `duplicateOfRequestId` | ObjectId? | |
 | `closure` | `{ reason, by, at, note, unitsReceived }`? | required when `closed` |
 | `alertBatches` | int | donor alert batches sent (verification sends batch 0); contact cooldown relaxed from the second batch |
-| `escalationStep` | int | last executed escalation-ladder step (Phase 10) |
+| `escalationStep` | int | last executed escalation-ladder step (`-1` = none; `0` set when verified) |
+| `review` | `{ by, at, reason }`? | set by an administrator to place the request "under review"; `null` otherwise |
 | `verifiedAt` | Date? | ladder anchor |
 | `version` | int | optimistic concurrency; every transition increments |
 
@@ -221,5 +222,5 @@ Indexes: `{ requestingFacilityId: 1, status: 1, createdAt: -1 }`; `{ respondingF
 | idempotency keys | 24 h (TTL) |
 | simulated SMS | 7 days (TTL) |
 | route cache | `ROUTE_CACHE_TTL_MIN` (TTL) |
-| family leads | expire after 24 h; purge personal fields 30 days after decision (Phase 10) |
+| family leads | expire after 24 h; name, phone and note replaced with `[REDACTED]` 30 days after decision or expiry (`expiryWorker`) |
 | audit logs | kept; contain no raw PII by construction |

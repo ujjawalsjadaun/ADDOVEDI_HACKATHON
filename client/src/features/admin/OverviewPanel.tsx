@@ -28,6 +28,8 @@ export function OverviewPanel() {
         <StatCard label="Suspicious reports" value={o.counts.openSuspiciousReports} to="/admin/reports" alertWhenNonZero="danger" />
         <StatCard label={`Unverified > ${o.verificationDeadlineMinutes}m`} value={o.counts.overdueVerifications} alertWhenNonZero="danger" />
         <StatCard label="No responders" value={o.counts.requestsWithoutResponders} alertWhenNonZero="danger" />
+        <StatCard label="Escalated requests" value={o.counts.escalatedRequests} to="/admin/escalations" alertWhenNonZero="danger" />
+        <StatCard label="Requests under review" value={o.counts.requestsUnderReview} to="/admin/requests" alertWhenNonZero="attention" />
         <StatCard label="Active requests" value={o.counts.activeRequests} to="/admin/requests" />
         <StatCard label="SMS outbox queued" value={o.counts.notificationsPending} to="/admin/notifications" />
         <StatCard label="SMS delivery failed" value={o.counts.notificationsFailed} to="/admin/notifications" alertWhenNonZero="danger" />

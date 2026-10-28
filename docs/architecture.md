@@ -215,7 +215,7 @@ Run in the API process on intervals (simple, documented limitation: they stop if
 | --- | --- | --- |
 | `outboxWorker` | 3 s | Claim due `notificationOutbox` rows with a lease (`lockedUntil`), send via `SmsProvider`, record attempt; retry transient failures with capped exponential backoff + jitter (max 5 attempts); mark permanent failures `failed`. |
 | `escalationWorker` | 15 s | For verified, open requests, run due ladder steps (see state-machines.md §5). Each step is a unique `escalationEvents` row — re-running is a no-op. |
-| `expiryWorker` | 60 s | Expire alerts past response window; expire requests past deadline; mark unverified requests overdue; stale road reports. |
+| `expiryWorker` | 60 s | Close requests past their deadline (ending alerts/assignments, SMS to donors still assigned); expire unanswered alerts and pending family leads; redact old family-lead contact data. Stale road reports need no job (`isStale` is derived). Overdue verifications are surfaced on the admin overview instead of auto-closed. |
 
 ## 9. Configuration (environment variables)
 

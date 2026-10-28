@@ -5,6 +5,7 @@ import {
   fulfillRequestSchema,
   listRequestsQuerySchema,
   nextBatchSchema,
+  reviewFlagSchema,
   reasonedTransitionSchema,
   verifyRequestSchema,
   type CreateRequestResult,
@@ -25,6 +26,7 @@ import {
   listRequests,
   rejectRequest,
   reviewDuplicate,
+  setReviewFlag,
   verifyRequest,
 } from './request.service';
 
@@ -92,6 +94,12 @@ export function requestRoutes(config: Config): Router {
   router.post('/:id/alerts/next-batch', async (req, res) => {
     const input = parse(nextBatchSchema, req.body);
     sendData(res, await alertMoreDonors(parseId(req.params.id), input, actionContext(res), config));
+  });
+
+  // Administrator only (checked again by the transition rules).
+  router.post('/:id/review-flag', requireRole('admin'), async (req, res) => {
+    const input = parse(reviewFlagSchema, req.body);
+    sendData(res, await setReviewFlag(parseId(req.params.id), input, actionContext(res), config));
   });
 
   return router;

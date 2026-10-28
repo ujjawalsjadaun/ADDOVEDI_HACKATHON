@@ -2,7 +2,7 @@
 
 Hospital-led, location-aware blood-request coordination for hill districts. Verified requests reach the most reachable compatible donors, ranked by road travel time rather than straight-line distance, with fallbacks for weak connectivity.
 
-> **Status:** Phase 9 — end-to-end flow (raise → verify → alert ranked donors in-app and by **simulated SMS** → race-safe accept → en route / arrived → donation → hospital-confirmed fulfilment), role dashboards, map and road reports, family leads, transport tasks, stock transfers, and **live updates** over Socket.IO. Travel times use live routing (optional) or a labelled simulation. No real SMS is ever sent.
+> **Status:** Phase 10 — end-to-end flow (raise → verify → alert ranked donors in-app and by **simulated SMS** → race-safe accept → en route / arrived → donation → hospital-confirmed fulfilment), role dashboards, map and road reports, family leads, transport tasks, stock transfers, live updates over Socket.IO, and **automatic escalation (5/10/15 min), request expiry and an admin "under review" flag**. Travel times use live routing (optional) or a labelled simulation. No real SMS is ever sent.
 > All donor, patient and facility data in this project is synthetic. This is not an official dispatch service and makes no medical eligibility decisions.
 
 ## Stack
@@ -33,7 +33,7 @@ Auth: HttpOnly session cookie (signed JWT with server-side revocation), bcrypt p
 │  │  ├─ providers/   external-service adapters: routing (simulated, OpenRouteService + cache),
 │  │  │               weather (simulated, Open-Meteo), sms (simulated)
 │  │  ├─ realtime/    Socket.IO server (cookie auth, server-assigned rooms) + post-commit emitter
-│  │  ├─ workers/     outbox worker (SMS sending with leases and retries)
+│  │  ├─ workers/     outbox (SMS with leases and retries), escalation (ladder steps), expiry
 │  │  ├─ scripts/     operator commands (create-admin, db:indexes)
 │  │  ├─ types/       Express type augmentation
 │  │  ├─ app.ts       Express app factory
@@ -145,6 +145,7 @@ The Vite dev server proxies `/api` to the API, so the browser sees one origin an
 | `/api/transport-tasks` (list, create, `/:id/status`) | hospital staff, coordinator, admin (per-action rules) |
 | `/api/stock-transfers` (list, create with `Idempotency-Key`, `/:id/status`) | hospital staff |
 | `/api/admin/notifications` (list, `/health`, `/:id/retry`) | admin |
+| `GET /api/admin/escalations`, `POST /api/requests/:id/review-flag` | admin |
 | Socket.IO at `/socket.io` — event `change { topic, id }` | signed-in users (rooms assigned by the server) |
 
 Full contracts: [docs/api-contracts.md](docs/api-contracts.md).
@@ -166,10 +167,11 @@ Full contracts: [docs/api-contracts.md](docs/api-contracts.md).
 - The outbox worker and Socket.IO run inside the API process: if the host sleeps they pause (pending messages resume on wake), and one process only (no multi-instance scaling).
 - Without an ORS key, travel times are a labelled **simulation** (straight line × 1.8 at 25 km/h). "Near the route" for road reports is a 2 km corridor around the straight line, not the real road.
 - Map tiles come from openstreetmap.org (needs internet; respect the OSM tile usage policy for heavy use).
-- The escalation ladder (automatic widening at 5/10/15 min), alert/request expiry and the stale-data worker arrive in Phase 10 — until then the hospital uses **Alert more donors**.
+- Escalation (ladder steps from `ESCALATION_STEPS_MIN`, default 5/10/15 min after verification) widens the donor search, then advises the hospital and queues the request for administrators (**Admin → Escalations**). It never contacts outside parties automatically. Like the other workers it runs inside the API process and pauses if the host sleeps.
+- Transactions: on a standalone local MongoDB the API falls back to non-transactional writes (atomic audit/outbox guarantees need a replica set such as Atlas); unique indexes still protect the key invariants.
 - Family leads have no phone-number verification (OTP) yet; they stay pending and can never alert donors regardless. The family is not notified automatically when a lead is confirmed or rejected — staff call back.
 - Transport is single-leg (no relay handovers); stock transfers have no live inventory feed.
-- Requests past their deadline stay open until the expiry worker (Phase 10); the hospital dashboard flags them ("Deadline passed — fulfil or cancel") and verification is refused after the deadline.
+- Requests past their deadline are closed as *expired* by the expiry worker (within about a minute), which also expires unanswered alerts and unanswered family leads and redacts contact details of decided leads after 30 days.
 - Rate limits are kept in memory, so they reset when the API restarts and are per-process.
 - Automated tests are out of scope from Phase 3 (decision D-26); each phase is verified manually.
 - `npm audit` reports one low-severity esbuild advisory (GHSA-g7r4-m6w7-qqqr) via `tsup`. It affects esbuild's own `serve` mode, which tsup does not use (D-19).

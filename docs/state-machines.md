@@ -114,6 +114,22 @@ Offsets from verification time, configured by `ESCALATION_STEPS_MIN` (default `0
 
 Each step inserts `escalationEvents { requestId, step }` (unique index). If the insert hits the unique key, the step already ran → no-op. Each event records `outcome` (`executed`, `skipped_condition_not_met`, `failed`) and `at`.
 
+**Implemented (Phase 10):** step 0 is recorded in the verify transaction (outcome `executed` if donors were alerted, otherwise `skipped_condition_not_met`). `workers/escalationWorker.ts` runs steps 1+ every 15 s for verified requests still `awaiting_donor`. Step 1's outcome reflects what really happened: `executed` only if it alerted at least one donor, `skipped_condition_not_met` if no eligible donor remained, `failed` if the alert batch errored. Steps 2 and 3 are audited (`request.escalated_level_2/3`), shown as banners to the hospital and appear in **Admin → Escalations**; there is no automatic outside contact. A request flagged **under review** is skipped by the worker (paused, not escalated), and a request that is no longer `awaiting_donor` (donor accepted, closed) is never escalated.
+
+### 5.1 Administrator review flag
+
+An administrator can place any non-closed request **under review** (e.g. after suspicious-request reports) and clear it, each with a reason (`request.flagged_under_review`, `request.review_cleared`). While flagged: the public checker shows `under_review`, the request cannot be verified, new donor alerts (manual and escalation) are refused, and escalation pauses. Cancel, reject and fulfil stay possible; donors already assigned are not cancelled.
+
+### 5.2 Expiry (`workers/expiryWorker.ts`, every 60 s)
+
+| What | Rule |
+| --- | --- |
+| Request past `deadlineAt`, not closed | Closes with `closure.reason = expired`, ends pending alerts and active assignments, SMS "no longer needed" to donors still assigned, audit `request.expired`. An unverified request also gets `verificationStatus = expired`. |
+| Pending alert past `expiresAt` | `response = expired` (reads already treat it as expired). |
+| Pending family lead past 24 h | `status = expired`. |
+| Decided/expired family lead older than 30 days | Name, phone and note replaced with `[REDACTED]` (data retention). |
+| Road reports | Never deleted: `isStale` is computed from `expiresAt`, and stale reports never affect ETAs. |
+
 ## 6. Assignment
 
 ```mermaid

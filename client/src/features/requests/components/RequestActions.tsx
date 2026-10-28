@@ -10,6 +10,8 @@ const BUTTONS: { action: RequestAction; label: string; danger?: boolean; primary
   { action: 'review_duplicate', label: 'Resolve duplicate review', primary: true },
   { action: 'fulfill', label: 'Confirm fulfilled', primary: true },
   { action: 'alert_next_batch', label: 'Alert more donors' },
+  { action: 'flag_review', label: 'Place under review', danger: true },
+  { action: 'clear_review', label: 'Clear review', primary: true },
   { action: 'reject', label: 'Reject', danger: true },
   { action: 'cancel', label: 'Cancel request', danger: true },
 ];
@@ -98,6 +100,31 @@ export function RequestActions({ request }: { request: RequestDetail }) {
           onCancel={close}
           onConfirm={(reason) =>
             mutation.mutate({ action: 'alerts/next-batch', body: { expectedVersion: request.version, reason } }, { onSuccess: close })
+          }
+        />
+      )}
+      {open === 'flag_review' && (
+        <ReasonForm
+          title="Place this request under review? The public checker will say “under review”, verification and new donor alerts pause. Donors already travelling are not cancelled."
+          confirmLabel="Place under review"
+          danger
+          pending={mutation.isPending}
+          error={mutation.error}
+          onCancel={close}
+          onConfirm={(reason) =>
+            mutation.mutate({ action: 'review-flag', body: { expectedVersion: request.version, flagged: true, reason } }, { onSuccess: close })
+          }
+        />
+      )}
+      {open === 'clear_review' && (
+        <ReasonForm
+          title="Clear the review? The request returns to its normal state and alerts can resume."
+          confirmLabel="Clear review"
+          pending={mutation.isPending}
+          error={mutation.error}
+          onCancel={close}
+          onConfirm={(reason) =>
+            mutation.mutate({ action: 'review-flag', body: { expectedVersion: request.version, flagged: false, reason } }, { onSuccess: close })
           }
         />
       )}

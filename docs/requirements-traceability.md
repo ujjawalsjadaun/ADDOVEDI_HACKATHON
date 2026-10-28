@@ -31,7 +31,7 @@ Repository is greenfield as of Phase 0, so every item starts as *missing*.
 | S1 | Leaflet map (hospitals, coarse donor markers, ambulance-accessible point) | P | 7 | implemented (Phase 7) — facilities, access points, road reports; donors never mapped |
 | S2 | Road ETA with timeout, cache, freshness label; labelled straight-line fallback | P | 7 | implemented (Phase 7) — ORS optional, cache with age, labelled fallback |
 | S3 | Rain/weather delay as configurable band | P | 7 | implemented (Phase 7) — Open-Meteo or simulated, 3 bands |
-| S4 | Configurable escalation ladder (0 / 5 / 10 / 15 min) | P | 10 | missing |
+| S4 | Configurable escalation ladder (0 / 5 / 10 / 15 min) | P | 10 | implemented (Phase 10) — idempotent ladder worker + admin Escalations queue |
 | S5 | SMS adapter with test mode and delivery-state tracking | P | 9 | implemented (Phase 9) — simulated provider, outbox, retries, honest statuses |
 | S6 | Hospital ↔ hospital / blood-bank stock request and transfer timeline | P | 8 | implemented (Phase 8) — request → offer → dispatch → received; no inventory feed |
 | S7 | Road closure reports with author, time, confidence, expiry, verification | P | 7 | implemented (Phase 7) |
@@ -44,11 +44,11 @@ Repository is greenfield as of Phase 0, so every item starts as *missing*.
 
 | ID | Requirement | Phase | Status |
 | --- | --- | --- | --- |
-| A1 | Rate limits on login, public checker, leads, webhooks | 3, 10 | partial — login (10 / 15 min per IP+email) |
+| A1 | Rate limits on login, public checker, leads, webhooks | 3, 10 | implemented — login, donor sign-up, public checker, reports, family leads, request creation, road reports |
 | A2 | Cooldowns and one active request per patient | 4–5 | implemented — unique active-request index, 90-day rest period, contact cooldown |
-| A3 | Strikes, account pause/review | 10 | partial — pause/suspend; no-show strikes + automatic review flag + admin review UI |
+| A3 | Strikes, account pause/review | 10 | implemented — pause/suspend, no-show strikes → automatic donor review flag, admin review UI, admin request review flag |
 | A4 | Suspicious-request reports | 4, 10 | implemented — public intake (Phase 4) + admin review queue (Phase 6) |
-| A5 | Audit trail | 4–10 | partial — all transitions audited; admin audit viewer (Phase 6) |
+| A5 | Audit trail | 4–10 | implemented — every transition, admin decision and worker action audited; admin audit viewer |
 
 ## Could Have / future (pitch marks several as planned)
 

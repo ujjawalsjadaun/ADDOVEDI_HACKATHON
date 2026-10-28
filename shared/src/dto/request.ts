@@ -12,7 +12,16 @@ import type { FacilitySummary } from './auth';
 import type { AlertSummary, AssignmentForHospital } from './donor';
 
 /** Actions the current user may take right now; computed by the server, re-checked on every call. */
-export type RequestAction = 'verify' | 'reject' | 'review_duplicate' | 'cancel' | 'fulfill' | 'alert_next_batch';
+export type RequestAction =
+  | 'verify'
+  | 'reject'
+  | 'review_duplicate'
+  | 'cancel'
+  | 'fulfill'
+  | 'alert_next_batch'
+  /** Admin only: mark a suspicious request "under review" (public checker shows it; alerts pause). */
+  | 'flag_review'
+  | 'clear_review';
 
 export interface RequestSummary {
   id: string;
@@ -32,6 +41,10 @@ export interface RequestSummary {
   requestStatus: RequestStatus;
   duplicateReviewStatus: DuplicateReviewStatus;
   closureReason: ClosureReason | null;
+  /** Last escalation-ladder step executed (-1 = none yet). */
+  escalationStep: number;
+  /** Flagged by an administrator for review; verification and new alerts are paused. */
+  underReview: boolean;
   createdAt: string;
   version: number;
 }
@@ -68,6 +81,7 @@ export interface RequestDetail extends RequestSummary {
   };
   duplicateOfRequestId: string | null;
   closure: { reason: ClosureReason; at: string; by: string | null; note: string | null; unitsReceived: number | null } | null;
+  review: { reason: string; by: string | null; at: string } | null;
   verifiedAt: string | null;
   timeline: TimelineEvent[];
   allowedActions: RequestAction[];

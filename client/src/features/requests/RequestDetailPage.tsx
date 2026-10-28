@@ -147,6 +147,27 @@ export function RequestDetailPage({ basePath = '/hospital/requests' }: { basePat
         </div>
       </header>
 
+      {r.review && (
+        <section role="status" className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-900">
+          <h3 className="font-semibold">Under administrator review</h3>
+          <p className="mt-0.5">
+            {r.review.by ?? 'An administrator'} paused this request on {formatDateTime(r.review.at)}: “{r.review.reason}”. The public checker shows
+            “under review”, and verification and new donor alerts are paused. Cancelling, rejecting and fulfilling remain possible.
+          </p>
+        </section>
+      )}
+
+      {r.requestStatus === 'awaiting_donor' && !r.review && r.escalationStep >= 2 && (
+        <section role="status" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+          <h3 className="font-semibold">No donor yet — escalated</h3>
+          <p className="mt-0.5">
+            Donors have been alerted without anyone accepting. Check your own blood bank, request stock from another facility under{' '}
+            <strong>Stock transfers</strong>
+            {r.escalationStep >= 3 ? ', and expect an administrator to contact nearby facilities' : ''}.
+          </p>
+        </section>
+      )}
+
       {r.duplicateReview.status !== 'none' && (
         <section className={`card ${r.duplicateReview.status === 'pending' ? 'border-red-200 bg-red-50' : ''}`}>
           <h3 className="font-semibold">Possible duplicate</h3>

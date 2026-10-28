@@ -15,6 +15,8 @@ export const ACTION_FROM: Record<RequestAction, readonly RequestStatus[]> = {
   cancel: ['open', 'awaiting_donor', 'donors_assigned'],
   fulfill: ['awaiting_donor', 'donors_assigned'],
   alert_next_batch: ['awaiting_donor'],
+  flag_review: ['open', 'awaiting_donor', 'donors_assigned'],
+  clear_review: ['open', 'awaiting_donor', 'donors_assigned'],
 };
 
 const ALL_ACTIONS = Object.keys(ACTION_FROM) as RequestAction[];
@@ -77,6 +79,7 @@ export function assertCanAct(action: RequestAction, s: ActionSubject): void {
       if (request.deadlineAt.getTime() <= Date.now()) {
         throw invalid('The deadline has passed. Cancel this request and raise a new one if blood is still needed.');
       }
+      if (request.review) throw invalid('An administrator has placed this request under review. It cannot be verified until the review is cleared.');
       return;
     }
     case 'reject':
@@ -92,6 +95,15 @@ export function assertCanAct(action: RequestAction, s: ActionSubject): void {
       return;
     case 'alert_next_batch':
       if (!isAdmin && !sameFacility(s)) throw forbidden('Only staff of this facility or an administrator can alert more donors.');
+      if (request.review) throw invalid('This request is under administrator review; no more donors are alerted until it is cleared.');
+      return;
+    case 'flag_review':
+      if (!isAdmin) throw forbidden('Only an administrator can place a request under review.');
+      if (request.review) throw invalid('This request is already under review.');
+      return;
+    case 'clear_review':
+      if (!isAdmin) throw forbidden('Only an administrator can clear a review.');
+      if (!request.review) throw invalid('This request is not under review.');
       return;
     case 'fulfill':
       // Fulfilment is a hospital fact; administrators cannot confirm it (docs/security.md §1).

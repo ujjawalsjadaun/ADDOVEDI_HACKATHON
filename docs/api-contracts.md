@@ -86,7 +86,7 @@ Role key: **PUB** public · **ADM** admin · **HS** hospital staff · **HV** hos
 | `POST /admin/donors/:userId/verification` | ADM | `{ decision: verified|unverified, reason }` |
 | `POST /admin/donors/:userId/review` | ADM | `{ decision: ok|under_review, reason }` (strikes) |
 | `GET /admin/audit?action=&resourceType=&resourceId=&facilityId=&result=&from=&to=` | ADM | paginated `AuditEntryView[]`, newest first; `action` is a prefix match (e.g. `request.`) |
-| `GET /admin/escalations?open=true` | ADM | escalation queue (Phase 10) |
+| `GET /admin/escalations?open=true|false` | ADM | `AdminEscalationItem[]`: requests at escalation step ≥ 1 (open ones by default), most escalated first, each with its ladder events (`step`, `outcome`, `at`, `detail`) |
 | `GET /admin/suspicious-reports?status=open|reviewed` | ADM | paginated `SuspiciousReportView[]` incl. matched request and same-source count (24 h, keyed IP hash) |
 | `POST /admin/suspicious-reports/:id/review` | ADM | `{ reason }` → marks reviewed, audited as `report.reviewed` |
 | `GET /admin/overview` | ADM | `AdminOverview`: counts (pending facilities, unverified donors, donors under review, overdue verifications, active requests, requests without responders, open reports, failed logins 24 h) + lists of overdue verifications and requests without responders |
@@ -112,7 +112,8 @@ All dashboard payloads carry `generatedAt`; the UI shows the age of every live v
 | `POST /requests/:id/reject` | HV own facility, ADM | `{ expectedVersion, reason }` |
 | `POST /requests/:id/duplicate-review` | HV own facility, ADM | `{ expectedVersion, decision: distinct|duplicate, duplicateOfRequestId?, reason }` |
 | `GET /requests/:id/candidates` | HS own facility, ADM | `CandidatePreview { ranked, manualReview, alreadyAlerted, cooldownRelaxed }` (see §3) — read-only |
-| `POST /requests/:id/alerts/next-batch` | HS own facility, ADM | `{ expectedVersion, reason }` → `RequestDetail` — manual widen; same code path used after withdrawal/no-show and by escalation (Phase 10) |
+| `POST /requests/:id/alerts/next-batch` | HS own facility, ADM | `{ expectedVersion, reason }` → `RequestDetail` — manual widen; same code path used after withdrawal/no-show and by the escalation worker. Refused while the request is under review |
+| `POST /requests/:id/review-flag` | ADM | `{ expectedVersion, flagged: boolean, reason }` → `RequestDetail`. Places a request under review / clears it (see state-machines.md §5.1). `allowedActions` includes `flag_review` / `clear_review` for admins only |
 | `POST /requests/:id/fulfill` | HS own facility | `{ expectedVersion, unitsReceived, note? }` → `closed/fulfilled` |
 | `POST /requests/:id/cancel` | HS own facility, ADM | `{ expectedVersion, reason }` |
 

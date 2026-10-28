@@ -35,6 +35,10 @@ function actionReasons(r: BloodRequestDocument, now: number): string[] {
   if (r.requestStatus === 'open' && r.duplicateReview.status === 'pending') reasons.push('Possible duplicate — review');
   else if (r.requestStatus === 'open') reasons.push('Awaiting verification');
   if (r.requestStatus === 'awaiting_donor' && r.slotsFilled === 0) reasons.push('No donor has accepted yet');
+  if (r.review) reasons.push('Under administrator review — alerts paused');
+  else if (r.requestStatus === 'awaiting_donor' && (r.escalationStep ?? -1) >= 2) {
+    reasons.push('Escalated — check your own blood bank or request stock from another facility');
+  }
   const left = r.deadlineAt.getTime() - now;
   if (left <= 0) reasons.push('Deadline passed — fulfil or cancel');
   else if (left <= 2 * HOUR_MS) reasons.push('Deadline within 2 hours');
@@ -99,7 +103,20 @@ export async function getAdminOverview(config: Config): Promise<AdminOverview> {
   const now = new Date();
   const overdueBefore = new Date(now.getTime() - config.VERIFICATION_DEADLINE_MIN * 60_000);
 
-  const [pendingFacilities, unverifiedDonors, donorsUnderReview, activeRequests, openReports, failedLogins, overdue, awaiting, smsPending, smsFailed] = await Promise.all([
+  const [
+    pendingFacilities,
+    unverifiedDonors,
+    donorsUnderReview,
+    activeRequests,
+    openReports,
+    failedLogins,
+    overdue,
+    awaiting,
+    smsPending,
+    smsFailed,
+    escalated,
+    flagged,
+  ] = await Promise.all([
     HospitalModel.countDocuments({ verificationStatus: 'pending' }),
     DonorProfileModel.countDocuments({ verificationStatus: 'unverified' }),
     DonorProfileModel.countDocuments({ reviewStatus: 'under_review' }),
@@ -110,6 +127,8 @@ export async function getAdminOverview(config: Config): Promise<AdminOverview> {
     BloodRequestModel.find({ requestStatus: 'awaiting_donor', slotsFilled: 0 }).sort({ deadlineAt: 1 }).limit(100),
     OutboxModel.countDocuments({ status: { $in: ['pending', 'sending'] } }),
     OutboxModel.countDocuments({ status: 'failed' }),
+    BloodRequestModel.countDocuments({ requestStatus: 'awaiting_donor', escalationStep: { $gte: 2 } }),
+    BloodRequestModel.countDocuments({ isActive: true, review: { $ne: null } }),
   ]);
 
   // "Without responders": nobody is currently considering it (no pending alert) and nobody accepted.
@@ -143,6 +162,8 @@ export async function getAdminOverview(config: Config): Promise<AdminOverview> {
       failedLogins24h: failedLogins,
       notificationsPending: smsPending,
       notificationsFailed: smsFailed,
+      escalatedRequests: escalated,
+      requestsUnderReview: flagged,
     },
     overdueVerifications: overdue.map((r) => ({
       id: r._id.toString(),

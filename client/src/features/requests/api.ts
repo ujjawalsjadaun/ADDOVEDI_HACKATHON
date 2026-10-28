@@ -5,6 +5,7 @@ import type {
   FulfillRequestInput,
   ReasonedTransitionInput,
   RequestDetail,
+  ReviewFlagInput,
   VerifyRequestInput,
 } from '@golden-hour/shared';
 import { api, ApiError } from '../../lib/api/client';
@@ -27,7 +28,8 @@ type ActionBody =
   | { action: 'cancel'; body: ReasonedTransitionInput }
   | { action: 'duplicate-review'; body: DuplicateReviewInput }
   | { action: 'fulfill'; body: FulfillRequestInput }
-  | { action: 'alerts/next-batch'; body: { expectedVersion: number; reason: string } };
+  | { action: 'alerts/next-batch'; body: { expectedVersion: number; reason: string } }
+  | { action: 'review-flag'; body: ReviewFlagInput };
 
 /** Runs one request transition. On a 409 the cached request is refreshed so the UI shows the new state. */
 export function useRequestAction(id: string) {

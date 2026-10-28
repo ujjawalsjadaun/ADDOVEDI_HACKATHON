@@ -40,6 +40,8 @@ export async function processExpiry(config: Config, logger: Logger): Promise<{
             $set: {
               requestStatus: 'closed',
               isActive: false,
+              // docs/state-machines.md §2.1: an unverified request that passes its deadline is `expired`.
+              ...(req.verificationStatus === 'pending' && { verificationStatus: 'expired' }),
               closure: {
                 reason: 'expired',
                 by: null,

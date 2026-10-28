@@ -14,7 +14,11 @@ const LABELS: Record<string, string> = {
   'request.rejected': 'Rejected',
   'request.cancelled': 'Cancelled',
   'request.fulfilled': 'Fulfilled — confirmed by the hospital',
-  'request.expired': 'Expired',
+  'request.expired': 'Expired — deadline passed',
+  'request.escalated_level_2': 'Escalated — hospital advised to check its blood bank or request stock',
+  'request.escalated_level_3': 'Escalated to administrators — nearby facilities to be contacted',
+  'request.flagged_under_review': 'Placed under administrator review — alerts paused',
+  'request.review_cleared': 'Administrator review cleared',
   'request.alerted': 'Donors alerted',
   'request.no_candidates': 'No eligible donor found for this batch',
   'request.search_widened': 'Search widened — more donors alerted',
@@ -64,7 +68,8 @@ export async function buildTimeline(requestId: Types.ObjectId): Promise<Timeline
 }
 
 function labelFor(action: string, detail: Record<string, unknown> | undefined): string {
-  const base = LABELS[action] ?? action;
+  const step = /^request\.escalated_level_(\d+)$/.exec(action);
+  const base = LABELS[action] ?? (step ? `Escalated (step ${step[1]})` : action);
   if (action === 'request.alerted' && typeof detail?.donors === 'number') return `${base} (${detail.donors})`;
   return base;
 }

@@ -30,7 +30,9 @@ const REQUEST_STATUS_LABEL: Record<Exclude<RequestStatus, 'closed'>, string> = {
 };
 
 /** One human label + tone for a request's combined state. */
-export function requestState(r: Pick<RequestSummary, 'requestStatus' | 'closureReason' | 'duplicateReviewStatus'>): {
+export function requestState(
+  r: Pick<RequestSummary, 'requestStatus' | 'closureReason' | 'duplicateReviewStatus'> & Partial<Pick<RequestSummary, 'underReview' | 'escalationStep'>>,
+): {
   label: string;
   tone: BadgeTone;
 } {
@@ -38,6 +40,8 @@ export function requestState(r: Pick<RequestSummary, 'requestStatus' | 'closureR
     const reason = r.closureReason ?? 'cancelled';
     return { label: CLOSURE_LABEL[reason], tone: reason === 'fulfilled' ? 'green' : 'slate' };
   }
+  if (r.underReview) return { label: 'Under admin review', tone: 'red' };
+  if (r.requestStatus === 'awaiting_donor' && (r.escalationStep ?? -1) >= 2) return { label: 'Escalated · finding donors', tone: 'red' };
   if (r.requestStatus === 'open' && r.duplicateReviewStatus === 'pending') return { label: 'Possible duplicate · review', tone: 'red' };
   return { label: REQUEST_STATUS_LABEL[r.requestStatus], tone: r.requestStatus === 'open' ? 'amber' : 'blue' };
 }

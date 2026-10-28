@@ -42,6 +42,10 @@ export interface AdminOverview {
     overdueVerifications: number;
     activeRequests: number;
     requestsWithoutResponders: number;
+    /** Open requests at escalation step 2 or higher (admins should act). */
+    escalatedRequests: number;
+    /** Requests an administrator has flagged "under review". */
+    requestsUnderReview: number;
     openSuspiciousReports: number;
     failedLogins24h: number;
     notificationsPending: number;

@@ -10,6 +10,7 @@ import {
   type RequestAction,
   type RequestDetail,
   type RequestSummary,
+  type ReviewFlagInput,
   type CandidatePreview,
   type VerifyRequestInput,
 } from '@golden-hour/shared';
@@ -31,6 +32,7 @@ import { UserModel } from '../users/user.model';
 import { toRequestDetail, toRequestSummary } from './request.dto';
 import { BloodRequestModel, type BloodRequestDocument } from './request.model';
 import { buildTimeline } from './request.timeline';
+import { EscalationEventModel } from './escalationEvent.model';
 import { allowedActions, applyTransition, assertCanAct } from './request.transitions';
 
 const SIMILARITY_WINDOW_MS = 6 * 60 * 60 * 1000;
@@ -104,7 +106,7 @@ export async function buildDetail(
       ? BloodRequestModel.find({ _id: { $in: request.duplicateReview.candidates } })
       : Promise.resolve([] as BloodRequestDocument[]),
     buildTimeline(request._id),
-    userNames([request.createdBy, request.verification?.by, request.duplicateReview.by, request.closure?.by]),
+    userNames([request.createdBy, request.verification?.by, request.duplicateReview.by, request.closure?.by, request.review?.by]),
     listForHospital(request._id, user),
     summariseAlerts(request._id),
   ]);
@@ -305,6 +307,7 @@ export async function verifyRequest(id: string, input: VerifyRequestInput, ctx: 
           urgencyConfirmed: input.urgencyConfirmed,
           requestStatus: 'awaiting_donor',
           alertBatches: 1,
+          escalationStep: 0,
         },
       },
     });
@@ -317,6 +320,11 @@ export async function verifyRequest(id: string, input: VerifyRequestInput, ctx: 
     );
     // No donor is contacted before this point (docs/state-machines.md §2).
     alerted = await insertAlertBatch(session, { request: doc, candidates: firstBatch.ranked, batch: 0, actor: userActor(ctx.user), requestId: ctx.requestId, config });
+    // Escalation ladder step 0 (docs/state-machines.md §5) is this first batch; the worker runs steps 1+.
+    await EscalationEventModel.create(
+      [{ requestId: doc._id, step: 0, outcome: alerted.length > 0 ? 'executed' : 'skipped_condition_not_met', detail: { alerted: alerted.length }, at: now }],
+      { session },
+    );
     return doc;
   });
   announce(updated, alerted);
@@ -486,4 +494,30 @@ export async function alertMoreDonors(
   });
   announce(request, alertedDonorIds);
   return buildDetail(request, await loadFacility(request.facilityId), ctx.user, config);
+}
+
+// ── administrator review flag ────────────────────────────────────────────────
+
+/**
+ * Places a request under review (or clears it). While flagged, the public checker shows "under
+ * review", verification and new donor alerts are refused, and escalation skips the request.
+ * Cancelling, rejecting and fulfilling stay possible.
+ */
+export async function setReviewFlag(id: string, input: ReviewFlagInput, ctx: ActionContext, config: Config): Promise<RequestDetail> {
+  const action = input.flagged ? 'flag_review' : 'clear_review';
+  const { facility } = await prepare(id, action, ctx, config);
+  const updated = await withTransaction(async (session) => {
+    const doc = await applyTransition(session, {
+      id,
+      expectedVersion: input.expectedVersion,
+      action,
+      update: {
+        $set: { review: input.flagged ? { by: new Types.ObjectId(ctx.user.id), at: new Date(), reason: input.reason } : null },
+      },
+    });
+    await recordAudit(audit(ctx, doc, input.flagged ? 'request.flagged_under_review' : 'request.review_cleared', { reason: input.reason }), session);
+    return doc;
+  });
+  announce(updated);
+  return buildDetail(updated, facility, ctx.user, config);
 }

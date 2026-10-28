@@ -70,6 +70,14 @@ export const listUsersQuerySchema = paginationQuerySchema.extend({
   facilityId: objectIdSchema.optional(),
 });
 
+/** Admin flags (or clears) a request as "under review" — e.g. after suspicious-request reports. */
+export const reviewFlagSchema = z.object({
+  expectedVersion: z.number().int().min(0),
+  flagged: z.boolean(),
+  reason: reasonSchema,
+});
+export type ReviewFlagInput = z.infer<typeof reviewFlagSchema>;
+
 export const adminEscalationsQuerySchema = z.object({
   open: z.enum(['true', 'false']).optional().default('true'),
 });

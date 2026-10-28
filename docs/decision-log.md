@@ -74,6 +74,11 @@ Each entry: decision, why, and whether it needs review by a domain partner befor
 | D-60 | 2026-10-29 | SMS provider is simulated only (messages visible in Admin → Notifications, numbers masked); optional `SIMULATED_SMS_FAILURE_RATE` to demonstrate retries. Inbound YES/NO and delivery webhooks remain deferred until a real provider is chosen. | No credentials; never message real people in a demo (A4). | — |
 | D-61 | 2026-10-29 | SMS templates contain only the public code, facility, district, blood group, deadline and links — never patient or donor details. | Data minimisation (security.md §5). | — |
 
+| D-62 | 2026-10-29 | Escalation (teammate's workers, Phase 10): step 0 is recorded at verification; the worker runs steps 1+ idempotently via unique `escalationEvents(requestId, step)`. A step's recorded outcome reflects what really happened (alerted nobody ⇒ `skipped_condition_not_met`, error ⇒ `failed`). Steps 2–3 only advise and queue admin attention — nothing contacts outside parties automatically. | Honest audit trail; blueprint "no job claims it contacted someone without evidence". | Partner review |
+| D-63 | 2026-10-29 | Admin "under review" flag on a request: public checker shows `under_review`, verification and new alerts pause, escalation skips it; cancel/reject/fulfil still allowed; already-assigned donors are not cancelled. Only admins set or clear it, with a reason (audited). | Pitch: suspicious-request handling without silently killing a possibly real emergency. | Partner review |
+| D-64 | 2026-10-29 | A request past its deadline is closed as `expired` by the worker (an unverified one also gets `verificationStatus = expired`); donors still assigned get the "no longer needed" SMS. Supersedes D-32. | Closes the interim gap from Phase 4. | — |
+| D-65 | 2026-10-29 | `withTransaction` falls back to non-transactional execution on a standalone MongoDB (teammate's change). Atomicity and the audit-with-change guarantee then hold only on a replica set (Atlas); unique indexes still enforce the key invariants. | Lets contributors run a plain local mongod; production/demo must use Atlas. | — |
+
 ## Open questions (non-blocking; defaults above apply)
 
 1. Should a hospital be able to confirm fulfillment with fewer units than requested (partial)? Default: yes, `unitsReceived` recorded.

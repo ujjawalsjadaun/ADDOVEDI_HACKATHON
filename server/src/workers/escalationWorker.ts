@@ -18,6 +18,8 @@ export async function processEscalations(config: Config, logger: Logger): Promis
     requestStatus: 'awaiting_donor',
     verificationStatus: 'verified',
     verifiedAt: { $ne: null },
+    // Requests under administrator review are paused, not escalated.
+    review: null,
   });
 
   let processedCount = 0;
@@ -60,13 +62,23 @@ export async function processEscalations(config: Config, logger: Logger): Promis
             { $set: { escalationStep: 1 } },
           );
 
+          // Record what actually happened: an "executed" step that alerted nobody would mislead admins.
           try {
-            await alertNextBatch(request._id, {
+            const { alertedDonorIds } = await alertNextBatch(request._id, {
               actor: SYSTEM_ACTOR,
               config,
               reason: `Escalation step 1: ${stepMinutes}m elapsed with request still awaiting donors`,
             });
+            await EscalationEventModel.updateOne(
+              { requestId: request._id, step: 1 },
+              { $set: { outcome: alertedDonorIds.length > 0 ? 'executed' : 'skipped_condition_not_met', 'detail.alerted': alertedDonorIds.length } },
+            );
+            publish('alert', alertedDonorIds.map((id) => rooms.user(id)), request._id);
           } catch (batchErr) {
+            await EscalationEventModel.updateOne(
+              { requestId: request._id, step: 1 },
+              { $set: { outcome: 'failed', 'detail.error': (batchErr as Error).message.slice(0, 200) } },
+            ).catch(() => undefined);
             logger.warn({ err: (batchErr as Error).message, requestId: request._id }, 'escalation step 1 alert widening skipped or failed');
           }
 
