@@ -77,7 +77,17 @@ Optional live providers (everything works without them, clearly labelled as simu
 - **Road travel times:** get a free key at openrouteservice.org, then set `ROUTING_PROVIDER=openrouteservice` and `ORS_API_KEY=…`.
 - **Weather:** set `WEATHER_PROVIDER=open-meteo` (no key). For a demo without internet, keep `simulated` and set `SIMULATED_RAIN_MM_PER_HOUR` (0 dry, 5 moderate, 10 heavy).
 
-### Create the first administrator
+### Quick start: load fictional demo data
+
+```bash
+npm run seed -w server
+```
+
+Creates (only what is missing, so it is safe to re-run) a fictional "Siang Hills" district: two verified facilities and one pending one, an admin, hospital staff and verifiers, a coordinator, seven donors (alertable, never-donated, resting after a recent donation, last-donation-unknown, and one awaiting verification) and one pending sample request. Every account uses the password printed at the end (`DemoPass#2026!`); sign in as `admin@demo.test`, `staff.a@demo.test`, `verifier.a@demo.test`, `verifier.b@demo.test`, `coord@demo.test` or `donor1@demo.test`…`donor7@demo.test`.
+
+Demo flow: sign in as `verifier.a@demo.test` and verify the sample request (it was raised by `staff.a`, so a different verifier is allowed) → `donor1`…`donor3` get alerts → sign in as a donor and accept → follow progress as the hospital. The command **refuses to run when `NODE_ENV=production`**, and nothing in it is real data — never reuse that password anywhere real.
+
+### Create the first administrator (without demo data)
 
 There is no public sign-up for administrators or hospital staff. Create the first admin once, after `server/.env` is filled in:
 

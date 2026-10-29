@@ -57,32 +57,44 @@ export function RequestDetailPage({ basePath = '/hospital/requests' }: { basePat
         </div>
       )}
 
-      <header className="card space-y-4 border-slate-200">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-2.5">
-            <span className="inline-flex items-center justify-center rounded-xl bg-brand-50 px-3 py-1 font-mono text-xl font-extrabold text-brand-700 border border-brand-200 shadow-2xs">
-              {r.bloodGroup}
-            </span>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="font-mono text-lg font-bold text-slate-900 tracking-tight">{r.publicCode}</h2>
-                <span className="rounded bg-slate-100 px-2 py-0.5 font-mono text-2xs font-semibold text-slate-600">ID: {r.id.slice(0, 8)}</span>
+      <header className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="banner rounded-none">
+          <div className="relative z-10 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-4">
+              <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-white font-mono text-3xl font-black text-brand-700 shadow-lg">
+                {r.bloodGroup}
               </div>
-              <p className="text-2xs text-slate-500 font-medium">Public Clinical Emergency Request</p>
+              <div className="min-w-0">
+                <p className="eyebrow text-brand-200">Blood request · {r.facilityName ?? 'your facility'}</p>
+                <h2 className="font-mono text-2xl font-black tracking-tight sm:text-3xl">{r.publicCode}</h2>
+                <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                  <StatusBadge status={state.label} label={state.label} tone={state.tone} />
+                  {active && (
+                    <StatusBadge
+                      status={r.urgency}
+                      label={`${URGENCY_LABEL[r.urgency]}${r.urgencyConfirmed ? '' : ' (suggested)'}`}
+                      tone={URGENCY_TONE[r.urgency]}
+                    />
+                  )}
+                </div>
+              </div>
             </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <StatusBadge status={state.label} label={state.label} tone={state.tone} />
-            {active && (
-              <StatusBadge
-                status={r.urgency}
-                label={`${URGENCY_LABEL[r.urgency]}${r.urgencyConfirmed ? '' : ' (suggested)'}`}
-                tone={URGENCY_TONE[r.urgency]}
-              />
-            )}
+            <div className="w-full sm:w-56">
+              <div className="flex items-baseline justify-between text-sm font-bold">
+                <span>Units assigned</span>
+                <span className="tabular-nums">
+                  {r.slotsFilled} / {r.unitsRequested}
+                </span>
+              </div>
+              <div className="mt-1.5 h-2.5 overflow-hidden rounded-full bg-white/25" role="progressbar" aria-valuemin={0} aria-valuemax={r.unitsRequested} aria-valuenow={r.slotsFilled} aria-label="Units assigned">
+                <div className="h-full rounded-full bg-white transition-all" style={{ width: `${Math.min(100, (r.slotsFilled / Math.max(1, r.unitsRequested)) * 100)}%` }} />
+              </div>
+              {active && <p className="mt-1.5 text-xs font-semibold text-brand-100">Needed by {formatDateTime(r.deadlineAt)} ({relativeTime(r.deadlineAt)})</p>}
+            </div>
           </div>
         </div>
 
+        <div className="space-y-4 p-5">
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 border-t border-slate-100 pt-4">
           <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-3">
             <dt className="text-2xs font-bold uppercase tracking-wider text-slate-500">Slots / Units</dt>
@@ -144,6 +156,7 @@ export function RequestDetailPage({ basePath = '/hospital/requests' }: { basePat
           <span>
             Anyone can check this code at <span className="font-mono font-semibold text-slate-700">/check/{r.publicCode}</span> — public verification exposes only verified status, facility name, and blood group without sensitive clinical data.
           </span>
+        </div>
         </div>
       </header>
 

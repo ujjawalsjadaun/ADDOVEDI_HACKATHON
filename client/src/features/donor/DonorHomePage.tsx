@@ -3,6 +3,7 @@ import { Link } from 'react-router';
 import type { DonorAlertView, DonorAssignmentView } from '@golden-hour/shared';
 import { DataFreshness } from '../../components/ui/DataFreshness';
 import { EtaBadge } from '../../components/ui/EtaBadge';
+import { PageHeader } from '../../components/ui/PageHeader';
 import { FormError, TextAreaField } from '../../components/ui/form';
 import { EmptyState, ErrorState, LoadingState } from '../../components/ui/states';
 import { StatusBadge } from '../../components/ui/StatusBadge';
@@ -25,6 +26,15 @@ export function DonorHomePage() {
 
   return (
     <div className="space-y-8">
+      <PageHeader
+        eyebrow="Donor"
+        title={pending.length > 0 ? `${pending.length} request${pending.length > 1 ? 's' : ''} need${pending.length > 1 ? '' : 's'} your answer` : 'You are on the donor list'}
+        subtitle={
+          pending.length > 0
+            ? 'Hospitals near you need your blood group. Please answer before the alert expires.'
+            : 'When a verified hospital nearby needs your blood group, the request appears here and by SMS.'
+        }
+      />
       {/* ── AVAILABILITY TOGGLE CARD ─────────────────────────────── */}
       <AvailabilityCard availability={p.availability} stale={p.availabilityStale} updatedAt={p.availabilityUpdatedAt} />
 
@@ -131,11 +141,15 @@ function AvailabilityCard({ availability, stale, updatedAt }: { availability: 'a
   const available = availability === 'available';
 
   return (
-    <section className="card flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-2xl p-5 sm:p-6 shadow-xs border-slate-200/90">
+    <section
+      className={`flex flex-col gap-4 rounded-2xl border-2 p-5 shadow-xs sm:flex-row sm:items-center sm:justify-between sm:p-6 ${
+        available ? 'border-emerald-300 bg-emerald-50' : 'border-slate-300 bg-slate-100'
+      }`}
+    >
       <div className="space-y-1">
         <div className="flex items-center gap-2">
-          <span className={`h-2.5 w-2.5 rounded-full ${available ? 'bg-emerald-500' : 'bg-slate-400'}`} aria-hidden="true" />
-          <h2 className="text-base font-bold text-slate-900">
+          <span className={`h-3 w-3 rounded-full ${available ? 'signal-dot bg-emerald-600' : 'bg-slate-500'}`} aria-hidden="true" />
+          <h2 className="text-lg font-extrabold text-slate-900">
             {available ? 'You are Available to Donate' : 'You are Marked Unavailable'}
           </h2>
         </div>
@@ -174,14 +188,14 @@ function PendingAlert({ alert, busy }: { alert: DonorAlertView; busy: boolean })
   const respond = useRespondAlert();
 
   return (
-    <li className="card rounded-2xl border-2 border-brand-200/80 bg-white p-6 shadow-xs space-y-4 animate-in fade-in slide-in-from-top-1 duration-150">
+    <li className="overflow-hidden rounded-2xl border-2 border-brand-300 bg-white p-6 shadow-md space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
         <div className="flex items-center gap-2.5">
-          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-50 font-mono text-base font-extrabold text-brand-700 ring-1 ring-brand-700/20">
+          <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-600 font-mono text-xl font-black text-white shadow-md">
             {alert.bloodGroup}
           </span>
           <div>
-            <h3 className="font-bold text-slate-900 leading-tight">{alert.facility.name}</h3>
+            <h3 className="text-lg font-extrabold leading-tight text-slate-900">{alert.facility.name}</h3>
             <span className="text-xs text-slate-500">{alert.facility.district}</span>
           </div>
         </div>

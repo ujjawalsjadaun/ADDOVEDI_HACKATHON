@@ -12,7 +12,7 @@ export function LiveStatus() {
   if (status === 'off') return null;
   const s = TEXT[status];
   return (
-    <span className="inline-flex items-center gap-1.5 text-xs text-slate-600" role="status">
+    <span className="inline-flex items-center gap-1.5 text-xs text-slate-300" role="status">
       <span className={`h-2 w-2 rounded-full ${s.dot}`} aria-hidden="true" />
       {s.text}
     </span>

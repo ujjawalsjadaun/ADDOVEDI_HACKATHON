@@ -1,5 +1,6 @@
 import { Link } from 'react-router';
 import { DataFreshness } from '../../components/ui/DataFreshness';
+import { PageHeader } from '../../components/ui/PageHeader';
 import { StatCard } from '../../components/ui/StatCard';
 import { EmptyState, ErrorState, LoadingState } from '../../components/ui/states';
 import { formatDateTime, relativeTime } from '../../lib/format';
@@ -13,13 +14,12 @@ export function OverviewPanel() {
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200/80 pb-4">
-        <div>
-          <h2 className="text-xl font-bold tracking-tight text-slate-900">System Overview & Operational Health</h2>
-          <p className="text-xs text-slate-500">Live operational telemetry across hospitals, donor registries, and message queues</p>
-        </div>
-        <DataFreshness updatedAt={q.dataUpdatedAt} staleAfterMs={90_000} isFetching={q.isFetching} isError={q.isError} onRefresh={() => void q.refetch()} />
-      </div>
+      <PageHeader
+        eyebrow="Administrator"
+        title="Operations overview"
+        subtitle="What needs a decision across facilities, donors, requests and messages."
+        meta={<DataFreshness updatedAt={q.dataUpdatedAt} staleAfterMs={90_000} isFetching={q.isFetching} isError={q.isError} onRefresh={() => void q.refetch()} />}
+      />
 
       <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-3 lg:grid-cols-5">
         <StatCard label="Facilities to verify" value={o.counts.pendingFacilities} to="/admin/hospitals" alertWhenNonZero="attention" />

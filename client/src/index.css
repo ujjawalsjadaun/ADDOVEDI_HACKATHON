@@ -50,3 +50,49 @@
     @apply rounded-xl border border-slate-200/90 bg-white p-5 shadow-xs transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md;
   }
 }
+
+/* ── Emergency-red presentation layer ─────────────────────────────────────── */
+@layer components {
+  /* Buttons that sit on the red banners / dark header. */
+  .btn-light {
+    @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-semibold text-brand-800 shadow-sm transition-all duration-150 hover:bg-brand-50 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50;
+  }
+  .btn-outline-light {
+    @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-white/40 bg-white/10 px-4 py-2 text-sm font-semibold text-white backdrop-blur-sm transition-all duration-150 hover:bg-white/20 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50;
+  }
+  /* Page banner used at the top of each workspace screen. */
+  .banner {
+    @apply relative overflow-hidden rounded-2xl bg-gradient-to-br from-brand-700 via-brand-800 to-brand-950 p-6 text-white shadow-md sm:p-7;
+  }
+  .banner::after {
+    content: '';
+    position: absolute;
+    inset: auto -4rem -5rem auto;
+    height: 14rem;
+    width: 14rem;
+    border-radius: 9999px;
+    background: radial-gradient(closest-side, rgb(255 255 255 / 0.14), transparent);
+    pointer-events: none;
+  }
+  .eyebrow {
+    @apply text-[11px] font-bold uppercase tracking-[0.14em];
+  }
+  .section-title {
+    @apply flex items-center gap-2.5 text-lg font-extrabold tracking-tight text-slate-900;
+  }
+  .section-title::before {
+    content: '';
+    @apply h-5 w-1 rounded-full bg-brand-600;
+  }
+}
+
+@keyframes signal {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.45; transform: scale(1.35); }
+}
+.signal-dot {
+  animation: signal 1.6s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .signal-dot { animation: none; }
+}

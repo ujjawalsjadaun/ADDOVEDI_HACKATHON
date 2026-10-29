@@ -85,6 +85,10 @@ Each entry: decision, why, and whether it needs review by a domain partner befor
 | D-68 | 2026-10-29 | In production the API refuses to start unless `CLIENT_ORIGIN` and `PUBLIC_APP_URL` are `https://`; the two secrets must differ in every environment. A missing `TRUST_PROXY` only warns (it cannot be detected reliably). | Fail fast on unsafe configuration. | — |
 | D-69 | 2026-10-29 | No demo seed or reset scripts and no Dockerfile are shipped (user instruction; Docker is also unavailable locally and could not be verified). The first admin comes from `create-admin`; the release checklist lists the manual demo preparation. | Scope decision D-26; avoid unverified artifacts. | — |
 
+| D-70 | 2026-10-29 | Supersedes D-69's "no seed script": at the user's request a single idempotent `npm run seed -w server` loads fictional demo data (matched by email/name so re-runs add nothing twice). It refuses `NODE_ENV=production`, uses reserved-looking fictional phones, one shared demo password, and creates no alerts or assignments (the demo flow produces those). Still no reset/wipe command. | An empty app cannot be demonstrated; keep it safe by construction. | — |
+
+| D-71 | 2026-10-29 | Visual direction changed to a bold emergency-red identity (user choice): dark header with a red signal bar, red page banners (`PageHeader`) on the hospital, admin and donor home screens, solid blood-group tiles, accent-bar stat cards, red-underline tabs. Landing-page claims were rewritten to what the system actually enforces (removed "Zero PII", "100% verified"); the example request card on the landing page is labelled illustrative. | The previous look was generic; panel members should see urgency at a glance without being misled. | — |
+
 ## Open questions (non-blocking; defaults above apply)
 
 1. Should a hospital be able to confirm fulfillment with fewer units than requested (partial)? Default: yes, `unitsReceived` recorded.

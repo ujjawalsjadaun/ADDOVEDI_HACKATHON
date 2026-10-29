@@ -11,7 +11,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "create-admin": "tsx src/scripts/createAdmin.ts",
-    "db:indexes": "tsx src/scripts/ensureIndexes.ts"
+    "db:indexes": "tsx src/scripts/ensureIndexes.ts",
+    "seed": "tsx src/scripts/seed.ts"
   },
   "dependencies": {
     "@golden-hour/shared": "*",

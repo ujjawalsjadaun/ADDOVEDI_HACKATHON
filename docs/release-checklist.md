@@ -37,7 +37,8 @@ Based on the blueprint's final checklist (Part I2). Tick each item by **inspecti
 
 - [ ] Atlas (replica set) is used, not a standalone MongoDB.
 - [ ] `npm ci && npm run build && npm start` works from a clean checkout; README steps match.
-- [ ] One administrator, one verified facility, one verifier + one other staff member, a coordinator and 3+ verified donors with locations exist.
+- [ ] Demo data is loaded with `npm run seed -w server` (development/demo database only — it refuses production), or set up by hand: one administrator, one verified facility, one verifier + one other staff member, a coordinator and 3+ verified donors with locations.
+- [ ] The demo database is **not** the one used for anything real; the shared demo password is not reused elsewhere.
 - [ ] Banners make clear what is simulated (SMS, and travel times/weather unless live providers are configured).
 - [ ] The presenter knows the limitations below and says them out loud.
 
