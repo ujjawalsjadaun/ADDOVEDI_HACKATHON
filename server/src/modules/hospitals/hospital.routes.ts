@@ -3,9 +3,11 @@ import {
   accessPointSchema,
   createHospitalSchema,
   hospitalDecisionSchema,
+  hospitalStrikeSchema,
   listHospitalsQuerySchema,
   publicHospitalsQuerySchema,
 } from '@golden-hour/shared';
+import type { Config } from '../../config/env';
 import { sendData } from '../../lib/http';
 import { parse, parseId } from '../../lib/validation';
 import { actionContext, requireRole } from '../../middleware/authorize';
@@ -15,6 +17,7 @@ import {
   getHospital,
   listHospitals,
   listVerifiedHospitals,
+  recordHospitalStrike,
   setAccessPoint,
 } from './hospital.service';
 import { publish, rooms } from '../../realtime/emitter';
@@ -39,7 +42,7 @@ export function publicHospitalRoutes(): Router {
 }
 
 /** /api/admin/hospitals — mounted behind requireRole('admin'). */
-export function adminHospitalRoutes(): Router {
+export function adminHospitalRoutes(config: Config): Router {
   const router = Router();
 
   router.get('/', async (req, res) => {
@@ -61,6 +64,11 @@ export function adminHospitalRoutes(): Router {
     const id = parseId(req.params.id);
     const input = parse(hospitalDecisionSchema, req.body);
     sendData(res, await decideHospitalVerification(id, input, actionContext(res)));
+  });
+
+  router.post('/:id/strike', async (req, res) => {
+    const input = parse(hospitalStrikeSchema, req.body);
+    sendData(res, await recordHospitalStrike(parseId(req.params.id), input, actionContext(res), config));
   });
 
   return router;

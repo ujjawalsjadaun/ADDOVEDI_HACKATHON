@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { Candidate, RequestDetail } from '@golden-hour/shared';
+import type { Candidate, Reachability, RequestDetail } from '@golden-hour/shared';
 import { EtaBadge } from '../../../components/ui/EtaBadge';
 import { ErrorState, LoadingState } from '../../../components/ui/states';
 import { useCandidates } from '../api';
@@ -33,6 +33,7 @@ export function CandidatesPanel({ request }: { request: RequestDetail }) {
               their clinical rest period and not already alerted for this request ({candidates.data.alreadyAlerted} alerted so far)
               {candidates.data.cooldownRelaxed ? '. Contact cooldown relaxed for escalation batches.' : '.'} Ranked by deadline feasibility, then road distance.
             </div>
+            <ReachabilityBars r={candidates.data.reachability} />
             <CandidateList title="Next in dispatch queue" items={candidates.data.ranked} empty="No eligible donors available at this moment." />
             {candidates.data.manualReview.length > 0 && (
               <CandidateList
@@ -80,6 +81,33 @@ function CandidateList({ title, items, empty, muted }: { title: string; items: C
           ))}
         </ol>
       )}
+    </div>
+  );
+}
+
+/** Who could get here in time, as counts only. Estimates come from road routing, not straight-line distance. */
+function ReachabilityBars({ r }: { r: Reachability }) {
+  const max = Math.max(1, ...r.bands.map((b) => b.count));
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white p-3" aria-label="Donor reachability">
+      <h4 className="text-sm font-bold text-slate-900">Can anyone get here in time?</h4>
+      <p className="mt-0.5 text-xs text-slate-600">
+        <strong className="text-emerald-700">{r.beforeDeadline}</strong> eligible donor{r.beforeDeadline === 1 ? '' : 's'} estimated to arrive before the deadline
+        {r.afterDeadline > 0 && <>, {r.afterDeadline} after it</>}
+        {r.unknown > 0 && <>, {r.unknown} with unknown travel time (not counted)</>}.
+      </p>
+      <ul className="mt-2 space-y-1">
+        {r.bands.map((b) => (
+          <li key={b.label} className="flex items-center gap-2 text-xs">
+            <span className="w-24 shrink-0 text-slate-600">{b.label}</span>
+            <span className="h-2.5 flex-1 overflow-hidden rounded-full bg-slate-100">
+              <span className="block h-full rounded-full bg-brand-600" style={{ width: `${(b.count / max) * 100}%` }} />
+            </span>
+            <span className="w-5 text-right font-bold tabular-nums">{b.count}</span>
+          </li>
+        ))}
+      </ul>
+      <p className="mt-2 text-2xs text-slate-500">Counts the {r.assessed} nearest eligible donors only. No names or places are shown here.</p>
     </div>
   );
 }

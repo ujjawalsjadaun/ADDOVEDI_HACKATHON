@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { BLOOD_GROUPS, type BloodGroup } from '@golden-hour/shared';
 import { fieldError, FormError, SelectField, TextAreaField, TextField } from '../../components/ui/form';
 import { newIdempotencyKey } from '../../lib/idempotency';
-import { usePublicFacilities, useSubmitFamilyLead } from './api';
+import { usePublicFacilities, useSubmitFamilyLead, useVerifyFamilyPhone } from './api';
 
 /**
  * Public form for families. A lead asks the chosen hospital blood bank to call back —
@@ -30,6 +30,7 @@ export function FamilyLeadPage() {
             <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Your Tracking Reference</span>
             <p className="font-mono text-xl font-extrabold text-slate-900 tracking-wider">{submit.data.reference}</p>
           </div>
+          <ConfirmNumber reference={submit.data.reference} />
           <p className="text-sm leading-relaxed">
             Hospital blood bank staff have received this request and will call you on the number provided.
           </p>
@@ -137,5 +138,33 @@ export function FamilyLeadPage() {
         </button>
       </form>
     </div>
+  );
+}
+
+/** The family types the code texted to their number. Optional for the callback, but only a confirmed number gets status texts. */
+function ConfirmNumber({ reference }: { reference: string }) {
+  const [code, setCode] = useState('');
+  const verify = useVerifyFamilyPhone();
+  if (verify.isSuccess) {
+    return <p role="status" className="rounded-xl bg-white/80 p-3 text-sm font-semibold text-emerald-900">Number confirmed. You will get a text when the hospital acts on your request.</p>;
+  }
+  return (
+    <form
+      className="space-y-2 rounded-xl bg-white/80 p-4 ring-1 ring-black/5"
+      onSubmit={(e) => {
+        e.preventDefault();
+        verify.mutate({ reference, code });
+      }}
+    >
+      <p className="text-sm font-semibold text-slate-900">Confirm your phone number</p>
+      <p className="text-xs text-slate-600">We texted a 6-digit code to the number you gave. Enter it to receive status updates by SMS. (Demonstration build: the text is simulated — see it in the administrator’s notification list.)</p>
+      <FormError error={verify.error} />
+      <div className="flex gap-2">
+        <input className="input w-36 font-mono tracking-widest" inputMode="numeric" maxLength={6} aria-label="6-digit code" value={code} onChange={(e) => setCode(e.target.value)} required />
+        <button type="submit" className="btn-primary" disabled={verify.isPending || code.length !== 6}>
+          Confirm
+        </button>
+      </div>
+    </form>
   );
 }

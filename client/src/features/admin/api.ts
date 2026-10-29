@@ -6,6 +6,10 @@ import type {
   AuditEntryView,
   NotificationQueueHealth,
   NotificationStatus,
+  HospitalStrikeInput,
+  MissedCallInput,
+  SmsReplyInput,
+  SmsReplyResult,
   NotificationView,
   RequestSummary,
   SuspiciousReportView,
@@ -48,6 +52,15 @@ export function useHospitalDecision() {
   return useMutation({
     mutationFn: async ({ id, ...input }: HospitalDecisionInput & { id: string }) =>
       (await api<HospitalAdmin>(`/admin/hospitals/${id}/verification`, { method: 'POST', body: input })).data,
+    onSettled: () => queryClient.invalidateQueries({ queryKey: HOSPITALS_KEY }),
+  });
+}
+
+export function useHospitalStrike() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ...input }: HospitalStrikeInput & { id: string }) =>
+      (await api<HospitalAdmin>(`/admin/hospitals/${id}/strike`, { method: 'POST', body: input })).data,
     onSettled: () => queryClient.invalidateQueries({ queryKey: HOSPITALS_KEY }),
   });
 }
@@ -180,6 +193,22 @@ export function useRetryNotification() {
   return useMutation({
     mutationFn: ({ id, reason }: { id: string; reason: string }) => api(`/admin/notifications/${id}/retry`, { method: 'POST', body: { reason } }),
     onSettled: () => queryClient.invalidateQueries({ queryKey: NOTIFICATIONS_KEY }),
+  });
+}
+
+export function useSimulateSmsReply() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: SmsReplyInput) => (await api<SmsReplyResult>('/admin/sms/simulate-reply', { method: 'POST', body: input })).data,
+    onSettled: () => queryClient.invalidateQueries(),
+  });
+}
+
+export function useSimulateMissedCall() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: MissedCallInput) => (await api<SmsReplyResult>('/admin/sms/simulate-missed-call', { method: 'POST', body: input })).data,
+    onSettled: () => queryClient.invalidateQueries(),
   });
 }
 

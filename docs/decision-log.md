@@ -93,3 +93,32 @@ Each entry: decision, why, and whether it needs review by a domain partner befor
 
 1. Should a hospital be able to confirm fulfillment with fewer units than requested (partial)? Default: yes, `unitsReceived` recorded.
 2. Should coordinators see request summaries for logistics? Default: summary only (code, facility, blood group, status, deadline).
+
+## Pitch-gap features
+
+### D-72 — SMS YES/NO replies reuse the app's accept/decline path
+Donors in low-signal areas can answer an alert by SMS ("YES K7P2"). The reply service identifies the donor by registered phone, picks the open alert (code required only if several), and calls `acceptAlert`/`declineAlert` — no second implementation of the slot-claim rules. Alerts get a 4-character `shortCode` (no look-alike characters). The provider webhook is disabled unless `INBOUND_SMS_SECRET` is set; an admin "simulate reply" form exercises the same path while SMS is simulated. Caveat: sender phone is the only identity on an SMS (spoofable by carriers); the damage is bounded to answering that donor's own open alert, and the hospital still confirms arrival and donation.
+
+### D-73 — "Planned" urgency stretches the escalation ladder
+The pitch's third urgency level is the existing `standard` level, now labelled "Planned". Its escalation steps (5/10/15 min) are multiplied by `PLANNED_ESCALATION_FACTOR` (default 3) so a scheduled transfusion does not trigger emergency widening; critical and urgent keep the base ladder. Urgency changes by the verifier take effect on the next worker tick.
+
+### D-74 — Strikes for false requests suspend a facility automatically
+Administrators can record a strike (with a reason, optionally the request) against a verified facility. At `HOSPITAL_STRIKE_LIMIT` (default 3) the facility becomes `suspended` in the same transaction, using the existing suspend state, so it can no longer raise requests; reinstating it is an explicit admin decision. Strikes are never automatic from request content — a human judges what is false.
+
+### D-75 — Missed ETA releases the slot, without an automatic strike
+A worker (every 60 s) marks accepted/en-route donors `no_show` once `acceptedAt + ETA + NO_SHOW_GRACE_MIN` has passed, frees the slot and alerts the next batch (audited `assignment.missed_eta`, actor system). Only assignments with a known ETA qualify: unknown stays unknown, never guessed. No strike is recorded automatically — in low-signal areas a donor may simply not have updated the app; a hospital marking a no-show by hand still records one.
+
+### D-76 — Donors can report a suspicious request from their alert
+One tap on an alert files a report into the existing admin queue (`fake_request`); the public code comes from the alert so donors cannot report arbitrary codes through this route. The reporter is a keyed hash of the user id, which dedupes repeats while keeping administrators from seeing who reported. Reporting does not decline the alert automatically.
+
+### D-77 — Family numbers are confirmed by an SMS code before any status text
+A family lead texts a 6-digit code (stored only as a keyed hash, 5 attempts) to the number given. Confirmation is optional for the hospital callback, but status SMS (lead confirmed / rejected / request closed) is sent only to confirmed numbers, so nobody can make the system text a stranger about a patient. The outbox gained `recipientLeadId`; the phone is read from the lead at send time and is purged with the lead's personal data under the existing 30-day retention rule.
+
+### D-78 — Reachability summary instead of a donor map
+The pitch's "who can reach us in time" is shown as counts by road-time band plus before/after-deadline totals, computed from the same ranked list used for alerting (so it can never disagree with who would actually be alerted). It exposes no names, coordinates or places, and unknown travel times are reported as unknown, never counted as reachable. A map was rejected because plotting donors would reveal home areas.
+
+### D-79 — A missed call refreshes availability only
+For donors with no data balance, a missed call from their registered number sets them available and refreshes the availability timestamp, so the 30-day staleness rule does not silently drop reliable donors. It cannot accept an alert, change consent or verification, and uses the same webhook secret as inbound SMS. The admin form simulates it while no real telephony provider is connected.
+
+### D-80 — Relay transport is two linked tasks, not a new state machine
+A relay across a river or ridge is modelled as two ordinary donor-pickup tasks sharing a `relayGroupId` (leg 1's id). Each leg keeps the existing state machine, audit and "one open pickup per assignment" index (leg 2 carries the assignment only as a display reference, so the index is unchanged and no migration is needed). Relay rules are layered on top: leg 2 cannot start before the donor is at the handover point, the receiving coordinator confirms leg 1, and a failed first leg cancels an unstarted second leg. Local-coordinator vouching for family requests is intentionally not built: a lead must be confirmed by hospital staff anyway (D-77).

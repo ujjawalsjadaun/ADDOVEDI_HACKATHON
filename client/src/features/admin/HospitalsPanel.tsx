@@ -9,7 +9,7 @@ import { fieldError, FormError, SelectField, TextField } from '../../components/
 import { ReasonForm } from '../../components/ui/ReasonForm';
 import { EmptyState, ErrorState, LoadingState } from '../../components/ui/states';
 import { StatusBadge } from '../../components/ui/StatusBadge';
-import { useAdminHospitals, useCreateHospital, useHospitalDecision } from './api';
+import { useAdminHospitals, useCreateHospital, useHospitalDecision, useHospitalStrike } from './api';
 
 type Decision = 'verified' | 'rejected' | 'suspended';
 
@@ -94,6 +94,8 @@ export function HospitalsPanel() {
 
 function HospitalRow({ hospital }: { hospital: HospitalAdmin }) {
   const [pending, setPending] = useState<Decision | null>(null);
+  const [striking, setStriking] = useState(false);
+  const strike = useHospitalStrike();
   const decide = useHospitalDecision();
   const action = ACTIONS[hospital.verificationStatus].find((a) => a.decision === pending);
 
@@ -115,6 +117,11 @@ function HospitalRow({ hospital }: { hospital: HospitalAdmin }) {
             <span>{hospital.staffCount} staff member{hospital.staffCount === 1 ? '' : 's'}</span>
           </div>
           <p className="text-xs text-slate-600">{hospital.address}</p>
+          {hospital.strikes > 0 && (
+            <p className="text-2xs font-semibold text-red-700">
+              {hospital.strikes} false-request strike{hospital.strikes === 1 ? '' : 's'} — suspended automatically at the limit.
+            </p>
+          )}
           <p className="text-2xs text-slate-500">Official contact: {hospital.registeredPhone}</p>
           {hospital.verification && (
             <div className="rounded-lg border border-slate-100 bg-slate-50/70 p-2 text-2xs text-slate-500 italic">
@@ -122,7 +129,7 @@ function HospitalRow({ hospital }: { hospital: HospitalAdmin }) {
             </div>
           )}
         </div>
-        {!pending && (
+        {!pending && !striking && (
           <div className="flex gap-2">
             {ACTIONS[hospital.verificationStatus].map((a) => (
               <button
@@ -137,9 +144,25 @@ function HospitalRow({ hospital }: { hospital: HospitalAdmin }) {
                 {a.label}
               </button>
             ))}
+            {hospital.verificationStatus === 'verified' && (
+              <button type="button" className="btn-secondary text-red-700" onClick={() => { strike.reset(); setStriking(true); }}>
+                Record false-request strike
+              </button>
+            )}
           </div>
         )}
       </div>
+      {striking && (
+        <ReasonForm
+          title={`Record a false-request strike against ${hospital.name}?`}
+          confirmLabel="Record strike"
+          danger
+          pending={strike.isPending}
+          error={strike.error}
+          onCancel={() => setStriking(false)}
+          onConfirm={(reason) => strike.mutate({ id: hospital.id, reason }, { onSuccess: () => setStriking(false) })}
+        />
+      )}
       {action && (
         <ReasonForm
           title={`${action.label} ${hospital.name}?`}

@@ -22,6 +22,7 @@ export function toHospitalAdmin(doc: HospitalDocument, staffCount: number): Hosp
       ? { by: doc.verification.by.toString(), at: doc.verification.at.toISOString(), reason: doc.verification.reason }
       : null,
     staffCount,
+    strikes: doc.falseRequestStrikes ?? 0,
     createdAt: (doc.get('createdAt') as Date).toISOString(),
   };
 }

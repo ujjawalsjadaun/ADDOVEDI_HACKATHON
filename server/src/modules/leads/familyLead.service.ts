@@ -1,3 +1,4 @@
+import { randomInt } from 'node:crypto';
 import type {
   ConfirmFamilyLeadInput,
   CreateFamilyLeadInput,
@@ -5,14 +6,17 @@ import type {
   FamilyLeadStatus,
   FamilyLeadView,
   RequestDetail,
+  VerifyFamilyPhoneInput,
 } from '@golden-hour/shared';
 import type { Config } from '../../config/env';
 import { AppError } from '../../lib/errors';
+import { hmacHex } from '../../lib/crypto';
 import { generateReference } from '../../lib/ids';
 import { isDuplicateKeyError, withTransaction } from '../../lib/transaction';
 import { recordAudit, userActor } from '../audit/audit.service';
 import type { ActionContext, AuthUser } from '../auth/auth.types';
 import { HospitalModel } from '../hospitals/hospital.model';
+import { enqueueNotification } from '../notifications/outbox.service';
 import { BloodRequestModel } from '../requests/request.model';
 import { createRequest, getRequestDetail } from '../requests/request.service';
 import { UserModel } from '../users/user.model';
@@ -33,7 +37,7 @@ function requireStaffOf(user: AuthUser, lead: FamilyLeadDocument) {
 // ── public submission ────────────────────────────────────────────────────────
 
 /** Records a family's lead for a verified facility. Pending until that hospital confirms; never alerts donors. */
-export async function submitFamilyLead(input: CreateFamilyLeadInput, httpRequestId: string): Promise<FamilyLeadReceipt> {
+export async function submitFamilyLead(input: CreateFamilyLeadInput, httpRequestId: string, config: Config): Promise<FamilyLeadReceipt> {
   const hospital = await HospitalModel.findOne({ _id: input.hospitalId, verificationStatus: 'verified' });
   if (!hospital) {
     throw new AppError('VALIDATION_FAILED', 'Some fields need attention.', { fields: { hospitalId: 'choose a registered hospital' } });
@@ -45,6 +49,7 @@ export async function submitFamilyLead(input: CreateFamilyLeadInput, httpRequest
 
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
+      const code = String(randomInt(100_000, 1_000_000));
       const lead = await withTransaction(async (session) => {
         const [created] = await FamilyLeadModel.create(
           [
@@ -53,6 +58,7 @@ export async function submitFamilyLead(input: CreateFamilyLeadInput, httpRequest
               hospitalId: hospital._id,
               contactName: input.contactName,
               contactPhone: input.contactPhone,
+              phoneCodeHash: hmacHex(config.SESSION_SECRET, `leadcode:${code}`),
               bloodGroup: input.bloodGroup ?? null,
               note: input.note || null,
               expiresAt: new Date(Date.now() + LEAD_TTL_MS),
@@ -72,15 +78,40 @@ export async function submitFamilyLead(input: CreateFamilyLeadInput, httpRequest
           },
           session,
         );
+        await enqueueNotification(session, {
+          eventId: `lead:${created!._id.toString()}:code`,
+          type: 'family_phone_code',
+          recipientLeadId: created!._id,
+          vars: { code, facilityName: hospital.name },
+        });
         return created!;
       });
-      return { reference: lead.reference, status: 'pending', facilityName: hospital.name };
+      return { reference: lead.reference, status: 'pending', facilityName: hospital.name, phoneVerificationRequired: true };
     } catch (err) {
       if (isDuplicateKeyError(err)) continue; // reference collision: try a new one
       throw err;
     }
   }
   throw new AppError('INTERNAL', 'Could not record the request. Please try again.');
+}
+
+const MAX_CODE_ATTEMPTS = 5;
+
+/**
+ * Confirms the family's number with the texted code. A wrong or unknown pair gives the same generic error
+ * (no enumeration of references); after 5 wrong tries the code is dead and the family must send a new request.
+ */
+export async function verifyFamilyPhone(input: VerifyFamilyPhoneInput, config: Config): Promise<{ verified: true }> {
+  const invalid = () => new AppError('VALIDATION_FAILED', 'That code is not correct, or it is no longer valid.');
+  const lead = await FamilyLeadModel.findOne({ reference: input.reference.toUpperCase() });
+  if (!lead || effectiveStatus(lead) === 'expired' || lead.phoneCodeAttempts >= MAX_CODE_ATTEMPTS) throw invalid();
+  if (lead.phoneVerified) return { verified: true };
+  if (lead.phoneCodeHash !== hmacHex(config.SESSION_SECRET, `leadcode:${input.code}`)) {
+    await FamilyLeadModel.updateOne({ _id: lead._id }, { $inc: { phoneCodeAttempts: 1 } });
+    throw invalid();
+  }
+  await FamilyLeadModel.updateOne({ _id: lead._id }, { $set: { phoneVerified: true, phoneCodeHash: null } });
+  return { verified: true };
 }
 
 // ── hospital review ──────────────────────────────────────────────────────────
@@ -97,6 +128,7 @@ async function toViews(leads: FamilyLeadDocument[]): Promise<FamilyLeadView[]> {
     reference: l.reference,
     contactName: l.contactName,
     contactPhone: l.contactPhone,
+    phoneVerified: l.phoneVerified,
     bloodGroup: l.bloodGroup ?? null,
     note: l.note ?? null,
     status: effectiveStatus(l),
@@ -150,6 +182,14 @@ export async function confirmFamilyLead(id: string, input: ConfirmFamilyLeadInpu
       },
       session,
     );
+    const facility = await HospitalModel.findById(lead.hospitalId).session(session).select('name');
+    await enqueueNotification(session, {
+      eventId: `lead:${lead._id.toString()}:confirmed`,
+      type: 'family_lead_update',
+      recipientLeadId: lead._id,
+      requestId: created._id,
+      vars: { event: 'confirmed', facilityName: facility?.name ?? 'The hospital', publicCode: created.publicCode, checkUrl: `${config.PUBLIC_APP_URL}/check/${created.publicCode}` },
+    });
   });
   return getRequestDetail(request._id.toString(), ctx.user, config);
 }
@@ -180,6 +220,13 @@ export async function rejectFamilyLead(id: string, reason: string, ctx: ActionCo
       },
       session,
     );
+    const facility = await HospitalModel.findById(doc.hospitalId).session(session).select('name');
+    await enqueueNotification(session, {
+      eventId: `lead:${doc._id.toString()}:rejected`,
+      type: 'family_lead_update',
+      recipientLeadId: doc._id,
+      vars: { event: 'rejected', facilityName: facility?.name ?? 'The hospital' },
+    });
     return doc;
   });
   return (await toViews([updated]))[0]!;

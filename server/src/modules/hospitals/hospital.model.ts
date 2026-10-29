@@ -24,6 +24,7 @@ const hospitalSchema = new Schema(
       ),
       default: null,
     },
+    falseRequestStrikes: { type: Number, default: 0 },
     verificationStatus: { type: String, enum: HOSPITAL_VERIFICATION_STATUSES, default: 'pending' },
     verification: {
       type: new Schema(

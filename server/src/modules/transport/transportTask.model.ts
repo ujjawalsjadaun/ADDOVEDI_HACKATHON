@@ -30,6 +30,11 @@ const transportTaskSchema = new Schema(
     kind: { type: String, enum: TRANSPORT_KINDS, required: true },
     pickup: { type: placeSchema, required: true },
     dropoff: { type: placeSchema, required: true },
+    /** Relay: 1 = donor to the handover point, 2 = handover point to the hospital. `relayGroupId` is leg 1's id. */
+    relayLeg: { type: Number, enum: [1, 2, null], default: null },
+    relayGroupId: { type: Schema.Types.ObjectId, default: null },
+    /** Leg 2 carries the donor's assignment for display only (the unique-open-pickup index stays on leg 1). */
+    relayAssignmentId: { type: Schema.Types.ObjectId, default: null },
     assigneeUserId: { type: Schema.Types.ObjectId, ref: 'User', default: null },
     status: { type: String, enum: TRANSPORT_STATUSES, default: 'requested' },
     /** true until completed/failed/cancelled; one open pickup per donor assignment. */
@@ -47,6 +52,7 @@ transportTaskSchema.index(
   { unique: true, partialFilterExpression: { open: true, assignmentId: { $type: 'objectId' } }, name: 'one_open_pickup_per_assignment' },
 );
 transportTaskSchema.index({ status: 1, createdAt: 1 });
+transportTaskSchema.index({ relayGroupId: 1 }, { sparse: true });
 transportTaskSchema.index({ assigneeUserId: 1, open: 1 });
 transportTaskSchema.index({ facilityId: 1, open: 1 });
 transportTaskSchema.index({ requestId: 1 });

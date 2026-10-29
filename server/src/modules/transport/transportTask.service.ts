@@ -1,4 +1,4 @@
-import type { CreateTransportTaskInput, TransportActionInput, TransportTaskView } from '@golden-hour/shared';
+import type { CreateTransportTaskInput, TransportAction, TransportActionInput, TransportTaskView } from '@golden-hour/shared';
 import { Types } from 'mongoose';
 import { AppError } from '../../lib/errors';
 import { fromGeoPoint, toGeoPoint } from '../../lib/geo';
@@ -22,12 +22,41 @@ function canSeeDonor(t: TransportTaskDocument, viewer: AuthUser): boolean {
   return !!t.assigneeUserId && t.assigneeUserId.toString() === viewer.id;
 }
 
+/**
+ * Allowed actions, with relay rules layered on the base state machine:
+ * - leg 2 can be claimed only once the donor has reached the handover point (leg 1 `handed_over`/`completed`);
+ * - leg 1 is completed by the leg-2 coordinator who receives the donor (or facility staff, as for any task);
+ * - if leg 1 failed or was cancelled, leg 2 can no longer be claimed.
+ */
+function allowedWithRelay(t: TransportTaskDocument, viewer: AuthUser, other: TransportTaskDocument | undefined): TransportAction[] {
+  const base = transportAllowedActions(t, viewer);
+  if (!t.relayLeg || !other) return base;
+  if (t.relayLeg === 2) return base.filter((a) => a !== 'claim' || ['handed_over', 'completed'].includes(other.status));
+  const receiver = !!other.assigneeUserId && other.assigneeUserId.toString() === viewer.id;
+  const out: TransportAction[] = base.filter((a) => a !== 'complete');
+  if (t.status === 'handed_over' && (receiver || base.includes('complete'))) out.push('complete');
+  return out;
+}
+
+async function relaySiblings(tasks: TransportTaskDocument[]): Promise<Map<string, TransportTaskDocument>> {
+  const groups = [...new Set(tasks.filter((t) => t.relayGroupId).map((t) => t.relayGroupId!.toString()))];
+  if (groups.length === 0) return new Map();
+  const all = await TransportTaskModel.find({ relayGroupId: { $in: groups } });
+  const byGroupLeg = new Map(all.map((t) => [`${t.relayGroupId!.toString()}:${t.relayLeg}`, t]));
+  // key: this task's id → the other leg
+  return new Map(tasks.filter((t) => t.relayGroupId).flatMap((t) => {
+    const other = byGroupLeg.get(`${t.relayGroupId!.toString()}:${t.relayLeg === 1 ? 2 : 1}`);
+    return other ? [[t._id.toString(), other] as const] : [];
+  }));
+}
+
 async function toViews(tasks: TransportTaskDocument[], viewer: AuthUser): Promise<TransportTaskView[]> {
   if (tasks.length === 0) return [];
+  const siblings = await relaySiblings(tasks);
   const [requests, facilities, assignments] = await Promise.all([
     BloodRequestModel.find({ _id: { $in: tasks.map((t) => t.requestId) } }),
     HospitalModel.find({ _id: { $in: tasks.map((t) => t.facilityId) } }).select('name district'),
-    AssignmentModel.find({ _id: { $in: tasks.map((t) => t.assignmentId).filter(Boolean) } }).select('donorUserId'),
+    AssignmentModel.find({ _id: { $in: tasks.map((t) => t.assignmentId ?? t.relayAssignmentId).filter(Boolean) } }).select('donorUserId'),
   ]);
   const userIds = [
     ...tasks.flatMap((t) => [t.assigneeUserId, ...t.history.map((h) => h.by)]),
@@ -43,7 +72,9 @@ async function toViews(tasks: TransportTaskDocument[], viewer: AuthUser): Promis
     const r = reqById.get(t.requestId.toString());
     const f = facById.get(t.facilityId.toString());
     if (!r || !f) return [];
-    const donorId = t.assignmentId ? donorByAssignment.get(t.assignmentId.toString()) : undefined;
+    const assignmentRef = t.assignmentId ?? t.relayAssignmentId;
+    const donorId = assignmentRef ? donorByAssignment.get(assignmentRef.toString()) : undefined;
+    const other = siblings.get(t._id.toString());
     const donor = donorId && canSeeDonor(t, viewer) ? userById.get(donorId) : undefined;
     const assignee = t.assigneeUserId ? userById.get(t.assigneeUserId.toString()) : undefined;
     return [
@@ -58,6 +89,9 @@ async function toViews(tasks: TransportTaskDocument[], viewer: AuthUser): Promis
         donor: donor ? { name: donor.name, phone: donor.phone ?? null } : null,
         assignee: assignee && t.assigneeUserId ? { id: t.assigneeUserId.toString(), name: assignee.name } : null,
         note: t.note ?? null,
+        relay: t.relayLeg
+          ? { leg: t.relayLeg as 1 | 2, handoverPoint: t.relayLeg === 1 ? t.dropoff.label : t.pickup.label, otherLegStatus: other?.status ?? null }
+          : null,
         history: t.history.map((h) => ({
           status: h.status,
           by: h.by ? (userById.get(h.by.toString())?.name ?? null) : null,
@@ -66,7 +100,7 @@ async function toViews(tasks: TransportTaskDocument[], viewer: AuthUser): Promis
         })),
         createdAt: (t.get('createdAt') as Date).toISOString(),
         version: t.version,
-        allowedActions: transportAllowedActions(t, viewer),
+        allowedActions: allowedWithRelay(t, viewer, other),
       },
     ];
   });
@@ -109,6 +143,33 @@ export async function createTransportTask(input: CreateTransportTaskInput, ctx: 
   const now = new Date();
   try {
     const task = await withTransaction(async (session) => {
+      if (input.relayPoint) {
+        const groupId = new Types.ObjectId();
+        const base = { requestId: request._id, facilityId: request.facilityId, createdBy: ctx.user.id, relayGroupId: groupId, note: input.note || null };
+        const placeOf = (p: { label: string; location?: { lat: number; lng: number } | null }) => ({ label: p.label, location: p.location ? toGeoPoint(p.location) : null });
+        const history = [{ status: 'requested' as const, by: new Types.ObjectId(ctx.user.id), at: now, note: input.note || null }];
+        const [leg1] = await TransportTaskModel.create(
+          [{ ...base, _id: groupId, kind: 'donor_pickup', assignmentId: input.assignmentId, relayLeg: 1, pickup: placeOf(input.pickup), dropoff: placeOf(input.relayPoint), history }],
+          { session },
+        );
+        await TransportTaskModel.create(
+          [{ ...base, kind: 'donor_pickup', assignmentId: null, relayAssignmentId: input.assignmentId, relayLeg: 2, pickup: placeOf(input.relayPoint), dropoff: placeOf(input.dropoff), history }],
+          { session },
+        );
+        await recordAudit(
+          {
+            actor: userActor(ctx.user),
+            action: 'transport.requested',
+            resourceType: 'bloodRequest',
+            resourceId: request._id,
+            facilityId: request.facilityId,
+            detail: { taskId: leg1!._id.toString(), kind: 'donor_pickup', relay: true, handoverPoint: input.relayPoint.label },
+            requestId: ctx.requestId,
+          },
+          session,
+        );
+        return leg1!;
+      }
       const [created] = await TransportTaskModel.create(
         [
           {
@@ -150,7 +211,8 @@ export async function actOnTransportTask(id: string, input: TransportActionInput
   const task = await TransportTaskModel.findById(id);
   if (!task) throw new AppError('NOT_FOUND', 'Not found.');
   if (ctx.user.role === 'hospital_staff' && ctx.user.facilityId !== task.facilityId.toString()) throw new AppError('NOT_FOUND', 'Not found.');
-  if (!transportAllowedActions(task, ctx.user).includes(input.action)) {
+  const other = task.relayGroupId ? (await relaySiblings([task])).get(task._id.toString()) : undefined;
+  if (!allowedWithRelay(task, ctx.user, other).includes(input.action)) {
     throw new AppError('INVALID_TRANSITION', 'This step is not possible for you on this task now.', { current: { status: task.status, version: task.version } });
   }
   const { from, to } = TRANSPORT_TRANSITIONS[input.action];
@@ -171,6 +233,18 @@ export async function actOnTransportTask(id: string, input: TransportActionInput
       { new: true, session },
     );
     if (!doc) throw new AppError('CONFLICT', 'This task just changed. Refresh and try again.');
+    // If the first leg fails or is cancelled, the second has nothing to carry: close it too (not for completed work).
+    if (doc.relayLeg === 1 && ['failed', 'cancelled'].includes(to)) {
+      await TransportTaskModel.updateMany(
+        { relayGroupId: doc.relayGroupId, relayLeg: 2, status: { $in: ['requested', 'assigned'] } },
+        {
+          $set: { status: 'cancelled', open: false },
+          $push: { history: { status: 'cancelled', by: new Types.ObjectId(ctx.user.id), at: now, note: 'First leg ended; this leg is no longer needed.' } },
+          $inc: { version: 1 },
+        },
+        { session },
+      );
+    }
     await recordAudit(
       {
         actor: userActor(ctx.user),

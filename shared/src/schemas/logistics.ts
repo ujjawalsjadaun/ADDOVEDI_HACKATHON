@@ -23,6 +23,13 @@ export type CreateFamilyLeadInput = z.infer<typeof createFamilyLeadSchema>;
 export const confirmFamilyLeadSchema = z.object({ request: createRequestSchema });
 export type ConfirmFamilyLeadInput = z.infer<typeof confirmFamilyLeadSchema>;
 
+/** The family types the 6-digit code that was texted to the number they gave, proving the number is theirs. */
+export const verifyFamilyPhoneSchema = z.object({
+  reference: z.string().trim().min(3).max(30),
+  code: z.string().trim().regex(/^\d{6}$/, 'enter the 6-digit code'),
+});
+export type VerifyFamilyPhoneInput = z.infer<typeof verifyFamilyPhoneSchema>;
+
 export const rejectFamilyLeadSchema = z.object({ reason: reasonSchema });
 
 // ── Transport tasks (docs/state-machines.md §9) ──────────────────────────────
@@ -48,8 +55,13 @@ export const createTransportTaskSchema = z.object({
   assignmentId: objectIdSchema.optional(),
   pickup: placeSchema,
   dropoff: placeSchema,
+  /**
+   * Donor pickups only: a handover point where the donor is passed to a second coordinator (relay across a
+   * river or ridge). Creates two linked legs: pickup → handover point, then handover point → dropoff.
+   */
+  relayPoint: placeSchema.optional(),
   note: z.string().trim().max(280).optional(),
-});
+}).refine((v) => !v.relayPoint || v.kind === 'donor_pickup', { path: ['relayPoint'], message: 'a relay is only for donor pickups' });
 export type CreateTransportTaskInput = z.infer<typeof createTransportTaskSchema>;
 
 export const transportActionSchema = z

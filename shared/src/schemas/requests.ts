@@ -82,6 +82,10 @@ export const suspiciousReportSchema = z.object({
 });
 export type SuspiciousReportInput = z.infer<typeof suspiciousReportSchema>;
 
+/** A donor reports the request behind one of their own alerts; the code comes from the alert, not the donor. */
+export const donorAlertReportSchema = suspiciousReportSchema.omit({ publicCode: true });
+export type DonorAlertReportInput = z.infer<typeof donorAlertReportSchema>;
+
 // ── Urgency suggestion (rule-based, never applied without hospital confirmation) ──
 
 /** docs/security.md §9: critical < 2 h to deadline, urgent < 6 h, otherwise standard. */

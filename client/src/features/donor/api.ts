@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type {
+  DonorAlertReportInput,
   DonorAlertView,
   DonorAssignmentStatusInput,
   DonorAssignmentView,
@@ -57,6 +58,13 @@ export function useSetAvailability() {
     mutationFn: async (availability: DonorAvailability) =>
       (await api<DonorProfileView>('/donors/me/availability', { method: 'POST', body: { availability } })).data,
     onSuccess: (profile) => queryClient.setQueryData(PROFILE_KEY, profile),
+  });
+}
+
+export function useReportAlert() {
+  return useMutation({
+    mutationFn: async ({ alertId, ...body }: DonorAlertReportInput & { alertId: string }) =>
+      (await api<{ reported: true }>(`/alerts/${alertId}/report`, { method: 'POST', body })).data,
   });
 }
 

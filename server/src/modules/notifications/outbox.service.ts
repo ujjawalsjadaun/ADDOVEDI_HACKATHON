@@ -13,6 +13,7 @@ import type { ActionContext } from '../auth/auth.types';
 import { DonorProfileModel } from '../donors/donor.model';
 import { BloodRequestModel } from '../requests/request.model';
 import { UserModel } from '../users/user.model';
+import { FamilyLeadModel } from '../leads/familyLead.model';
 import { OutboxModel, type OutboxDocument } from './outbox.model';
 import { renderSms, type TemplateVars } from './templates';
 
@@ -29,7 +30,15 @@ const MAX_BACKOFF_MS = 5 * 60_000;
  */
 export async function enqueueNotification(
   session: ClientSession,
-  n: { eventId: string; type: NotificationType; recipientUserId: Types.ObjectId | string; requestId?: Types.ObjectId | null; vars: TemplateVars },
+  n: {
+    eventId: string;
+    type: NotificationType;
+    recipientUserId?: Types.ObjectId | string;
+    /** Family leads have no account: their number is read from the lead when the message is sent. */
+    recipientLeadId?: Types.ObjectId | string;
+    requestId?: Types.ObjectId | null;
+    vars: TemplateVars;
+  },
 ): Promise<void> {
   await OutboxModel.updateOne(
     { eventId: n.eventId },
@@ -38,7 +47,8 @@ export async function enqueueNotification(
         eventId: n.eventId,
         type: n.type,
         channel: 'sms',
-        recipientUserId: n.recipientUserId,
+        recipientUserId: n.recipientUserId ?? null,
+        recipientLeadId: n.recipientLeadId ?? null,
         requestId: n.requestId ?? null,
         vars: n.vars,
         status: 'pending',
@@ -81,7 +91,22 @@ async function finish(msg: OutboxDocument, update: Record<string, unknown>): Pro
   }
 }
 
+async function sendToLead(msg: OutboxDocument, config: Config): Promise<void> {
+  const lead = await FamilyLeadModel.findById(msg.recipientLeadId).select('contactPhone phoneVerified').lean();
+  // Updates go only to numbers the family proved are theirs, so a stranger's number is never texted about a patient.
+  if (!lead?.contactPhone) return finish(msg, { status: 'failed', lastError: 'NO_PHONE_NUMBER' });
+  if (msg.type !== 'family_phone_code' && !lead.phoneVerified) return finish(msg, { status: 'failed', lastError: 'PHONE_NOT_CONFIRMED' });
+  const body = renderSms(msg.type, msg.vars as TemplateVars);
+  const result = await getSmsProvider(config)
+    .send({ to: lead.contactPhone, body, idempotencyKey: msg.eventId })
+    .catch((err: unknown) => ({ status: 'failed' as const, errorCode: err instanceof Error ? err.message.slice(0, 120) : 'SEND_ERROR', permanent: false }));
+  if (result.status === 'accepted') return finish(msg, { status: 'sent', providerMessageId: result.providerMessageId, sentAt: new Date(), lastError: null });
+  if (result.permanent || msg.attempts >= config.OUTBOX_MAX_ATTEMPTS) return finish(msg, { status: 'failed', lastError: result.errorCode });
+  return finish(msg, { status: 'pending', lastError: result.errorCode, nextAttemptAt: new Date(Date.now() + backoffMs(msg.attempts)) });
+}
+
 async function sendOne(msg: OutboxDocument, config: Config): Promise<void> {
+  if (msg.recipientLeadId) return sendToLead(msg, config);
   const [user, profile] = await Promise.all([
     UserModel.findById(msg.recipientUserId).select('phone status').lean(),
     DonorProfileModel.findOne({ userId: msg.recipientUserId }).select('consent').lean(),
@@ -133,15 +158,17 @@ export async function listNotifications(query: { status?: NotificationStatus; pa
     OutboxModel.find(filter).sort({ createdAt: -1 }).skip((query.page - 1) * query.limit).limit(query.limit),
     OutboxModel.countDocuments(filter),
   ]);
-  const [users, requests] = await Promise.all([
-    UserModel.find({ _id: { $in: rows.map((r) => r.recipientUserId) } }).select('name phone').lean(),
+  const [users, leads, requests] = await Promise.all([
+    UserModel.find({ _id: { $in: rows.map((r) => r.recipientUserId).filter(Boolean) } }).select('name phone').lean(),
+    FamilyLeadModel.find({ _id: { $in: rows.map((r) => r.recipientLeadId).filter(Boolean) } }).select('contactName contactPhone').lean(),
     BloodRequestModel.find({ _id: { $in: rows.map((r) => r.requestId).filter(Boolean) } }).select('publicCode').lean(),
   ]);
-  const userById = new Map(users.map((u) => [u._id.toString(), u]));
+  const userById = new Map(users.map((u) => [u._id.toString(), { name: u.name as string | undefined, phone: u.phone as string | undefined }]));
+  for (const l of leads) userById.set(l._id.toString(), { name: `${l.contactName} (family)`, phone: l.contactPhone });
   const codeById = new Map(requests.map((r) => [r._id.toString(), r.publicCode]));
   return {
     items: rows.map((r) => {
-      const u = userById.get(r.recipientUserId.toString());
+      const u = userById.get((r.recipientUserId ?? r.recipientLeadId)?.toString() ?? '');
       return {
         id: r._id.toString(),
         eventId: r.eventId,

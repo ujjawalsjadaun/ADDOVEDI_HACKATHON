@@ -6,7 +6,7 @@ import type { BadgeTone } from '../components/ui/StatusBadge';
 export const URGENCY_LABEL: Record<Urgency, string> = {
   critical: 'Critical',
   urgent: 'Urgent',
-  standard: 'Standard',
+  standard: 'Planned',
 };
 
 export const URGENCY_TONE: Record<Urgency, BadgeTone> = {

@@ -49,6 +49,8 @@ function CreateTransportForm({ request, onDone }: { request: RequestDetail; onDo
   const [pickup, setPickup] = useState(donor?.donor.anchorLabel ?? '');
   const [dropoff, setDropoff] = useState(request.facility.name);
   const [note, setNote] = useState('');
+  const [relay, setRelay] = useState(false);
+  const [relayPoint, setRelayPoint] = useState('');
 
   function submit(e: FormEvent) {
     e.preventDefault();
@@ -59,6 +61,7 @@ function CreateTransportForm({ request, onDone }: { request: RequestDetail; onDo
         assignmentId: kind === 'donor_pickup' ? assignmentId || undefined : undefined,
         pickup: { label: pickup },
         dropoff: { label: dropoff },
+        relayPoint: kind === 'donor_pickup' && relay ? { label: relayPoint } : undefined,
         note: note || undefined,
       },
       { onSuccess: onDone },
@@ -98,6 +101,17 @@ function CreateTransportForm({ request, onDone }: { request: RequestDetail; onDo
         <TextField label="From" required value={pickup} onChange={(e) => setPickup(e.target.value)} error={fieldError(err, 'pickup.label')} placeholder="Village, landmark or facility" />
         <TextField label="To" required value={dropoff} onChange={(e) => setDropoff(e.target.value)} error={fieldError(err, 'dropoff.label')} />
       </div>
+      {kind === 'donor_pickup' && (
+        <div className="space-y-2">
+          <label className="flex items-center gap-2 text-sm font-medium text-slate-800">
+            <input type="checkbox" checked={relay} onChange={(e) => setRelay(e.target.checked)} />
+            Relay: hand the donor over to a second coordinator (e.g. across a river or ridge)
+          </label>
+          {relay && (
+            <TextField label="Handover point" required value={relayPoint} onChange={(e) => setRelayPoint(e.target.value)} error={fieldError(err, 'relayPoint.label')} placeholder="Where the two coordinators meet" />
+          )}
+        </div>
+      )}
       <TextAreaField label="Instructions (optional)" maxLength={280} value={note} onChange={(e) => setNote(e.target.value)} />
       <button type="submit" className="btn-primary" disabled={create.isPending}>
         {create.isPending ? 'Saving…' : 'Request transport'}

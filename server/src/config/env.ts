@@ -40,6 +40,8 @@ const envSchema = z
     /** Base URL of the web app, used for links in SMS (e.g. the public checker). */
     PUBLIC_APP_URL: z.url().default('http://localhost:5173'),
     /** Simulated SMS only: share of sends that fail transiently (0–1), to demonstrate retries. */
+    /** Shared secret an SMS provider webhook sends in `x-sms-secret`. Unset = the inbound webhook is disabled (admin simulation still works). */
+    INBOUND_SMS_SECRET: secret.optional(),
     SIMULATED_SMS_FAILURE_RATE: z.coerce.number().min(0).max(1).default(0),
     OUTBOX_MAX_ATTEMPTS: intIn(1, 20).default(5),
     OUTBOX_POLL_MS: intIn(500, 60_000).default(3000),
@@ -54,6 +56,12 @@ const envSchema = z
     /** A blocked-road report this close to the straight line between donor and hospital makes the ETA unknown. */
     ROAD_REPORT_CORRIDOR_KM: z.coerce.number().min(0.1).max(20).default(2),
     ESCALATION_STEPS_MIN: minuteList.default([0, 5, 10, 15]),
+    /** Multiplier on every escalation step for planned (standard-urgency) requests. 1 = same ladder as emergencies. */
+    PLANNED_ESCALATION_FACTOR: z.coerce.number().min(1).max(10).default(3),
+    /** False-request strikes after which a verified facility is suspended automatically. */
+    HOSPITAL_STRIKE_LIMIT: intIn(1, 20).default(3),
+    /** Minutes after a donor's estimated arrival before the slot is released automatically. */
+    NO_SHOW_GRACE_MIN: intIn(0, 240).default(30),
     ALERT_BATCH_SIZE: intIn(1, 20).default(3),
     ALERT_RESPONSE_WINDOW_MIN: intIn(1, 120).default(5),
     DONATION_REST_DAYS: intIn(1, 365).default(90),

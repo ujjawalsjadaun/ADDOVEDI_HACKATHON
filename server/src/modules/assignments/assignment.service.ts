@@ -9,7 +9,7 @@ import type {
 import type { ClientSession, Types, UpdateQuery } from 'mongoose';
 import { AppError } from '../../lib/errors';
 import { isDuplicateKeyError, withTransaction } from '../../lib/transaction';
-import { recordAudit, userActor, type AuditActor } from '../audit/audit.service';
+import { recordAudit, SYSTEM_ACTOR, userActor, type AuditActor } from '../audit/audit.service';
 import type { ActionContext, AuthUser } from '../auth/auth.types';
 import { effectiveResponse } from '../alerts/alert.dto';
 import { RequestAlertModel } from '../alerts/alert.model';
@@ -18,6 +18,7 @@ import { DonorProfileModel } from '../donors/donor.model';
 import { enqueueNotification } from '../notifications/outbox.service';
 import { publish, rooms } from '../../realtime/emitter';
 import { recordStrike } from '../donors/donor.service';
+import { FamilyLeadModel } from '../leads/familyLead.model';
 import { HospitalModel } from '../hospitals/hospital.model';
 import { BloodRequestModel } from '../requests/request.model';
 import { UserModel } from '../users/user.model';
@@ -324,6 +325,17 @@ export async function endForClosedRequest(
       vars: { publicCode: request.publicCode, facilityName: facility?.name ?? 'the hospital', outcome },
     });
   }
+  // The family that asked for this blood is told, if they confirmed their number.
+  const lead = await FamilyLeadModel.findOne({ linkedRequestId: request._id }).session(session).select('_id');
+  if (lead) {
+    await enqueueNotification(session, {
+      eventId: `lead:${lead._id.toString()}:closed`,
+      type: 'family_lead_update',
+      recipientLeadId: lead._id,
+      requestId: request._id,
+      vars: { event: 'closed', facilityName: facility?.name ?? 'the hospital', publicCode: request.publicCode, outcome },
+    });
+  }
   // Pending alerts were cancelled too: those donors' lists change as well.
   const alerted = await RequestAlertModel.find({ requestId: request._id }).session(session).distinct('donorUserId');
   return [...new Set([...active.map((a) => a.donorUserId.toString()), ...alerted.map(String)])];
@@ -353,4 +365,42 @@ export async function listForDonor(user: AuthUser): Promise<DonorAssignmentView[
     const f = r && facById.get(r.facilityId.toString());
     return r && f ? [toDonorAssignmentView(a, r, f, user)] : [];
   });
+}
+
+// ── automatic release of donors who missed their ETA ─────────────────────────
+
+/**
+ * Releases accepted/en-route donors whose own travel-time estimate (plus a grace period) has passed
+ * without an arrival. Only assignments with a KNOWN ETA qualify — an unknown ETA is never guessed.
+ * The donor is marked `no_show` and the slot freed, but NO strike is recorded: the donor may simply not
+ * have updated the app in a low-signal area, and a strike needs a person's judgement (D-75).
+ */
+export async function releaseMissedEtaAssignments(graceMin: number, now = new Date()): Promise<AssignmentDocument[]> {
+  const candidates = await AssignmentModel.find({ status: { $in: ['accepted', 'en_route'] }, isActive: true, 'eta.minutes': { $ne: null } });
+  const released: AssignmentDocument[] = [];
+  for (const c of candidates) {
+    const dueAt = c.acceptedAt.getTime() + ((c.eta?.minutes ?? 0) + graceMin) * 60_000;
+    if (dueAt > now.getTime()) continue;
+    try {
+      const a = await withTransaction(async (session) => {
+        const doc = await transitionAssignment(session, {
+          id: c._id.toString(),
+          expectedVersion: c.version,
+          from: ['accepted', 'en_route'],
+          update: {
+            $set: { status: 'no_show', isActive: false, holdsSlot: false, endedAt: now, endReason: `Automatic: did not arrive within the estimated ${c.eta?.minutes} min plus ${graceMin} min grace.` },
+          },
+        });
+        await releaseSlot(session, doc.requestId);
+        await recordAudit(auditOnRequest(SYSTEM_ACTOR, doc, 'assignment.missed_eta', { reason: doc.endReason ?? undefined }), session);
+        return doc;
+      });
+      announceAssignment(a);
+      released.push(a);
+    } catch (err) {
+      // A donor who updated their status in the meantime (409/invalid transition) is simply skipped.
+      if (!(err instanceof AppError)) throw err;
+    }
+  }
+  return released;
 }

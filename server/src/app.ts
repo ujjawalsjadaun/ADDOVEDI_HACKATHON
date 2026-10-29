@@ -24,6 +24,7 @@ import { roadReportRoutes } from './modules/roads/roadReport.routes';
 import { geoRoutes } from './modules/geo/geo.routes';
 import { familyLeadRoutes } from './modules/leads/familyLead.routes';
 import { transportRoutes } from './modules/transport/transportTask.routes';
+import { inboundSmsRoutes } from './modules/alerts/smsReply.routes';
 import { stockTransferRoutes } from './modules/transfers/stockTransfer.routes';
 
 export interface AppDeps {
@@ -95,7 +96,8 @@ export function createApp({ config, logger }: AppDeps) {
   api.use('/requests', requestRoutes(config));
   api.use('/public', publicCheckerRoutes(config));
   api.use('/donors', donorRoutes(config));
-  api.use('/alerts', alertRoutes());
+  api.use('/alerts', alertRoutes(config));
+  api.use('/sms', inboundSmsRoutes(config));
   api.use('/assignments', assignmentRoutes(config, logger));
   api.use('/dashboard', dashboardRoutes());
   api.use('/road-reports', roadReportRoutes());

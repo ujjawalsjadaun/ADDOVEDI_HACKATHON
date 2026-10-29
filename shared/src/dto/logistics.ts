@@ -14,6 +14,8 @@ export interface FamilyLeadReceipt {
   reference: string;
   status: 'pending';
   facilityName: string;
+  /** A code was texted to the number given; entering it confirms the number belongs to the family. */
+  phoneVerificationRequired: true;
 }
 
 /** Hospital view of a lead for its own facility. */
@@ -22,6 +24,8 @@ export interface FamilyLeadView {
   reference: string;
   contactName: string;
   contactPhone: string;
+  /** True once the family typed the code texted to this number. */
+  phoneVerified: boolean;
   bloodGroup: BloodGroup | null;
   note: string | null;
   status: FamilyLeadStatus;
@@ -45,6 +49,8 @@ export interface TransportTaskView {
   donor: { name: string; phone: string | null } | null;
   assignee: { id: string; name: string } | null;
   note: string | null;
+  /** Set when this task is one leg of a two-coordinator relay. */
+  relay: { leg: 1 | 2; handoverPoint: string; otherLegStatus: TransportStatus | null } | null;
   history: { status: TransportStatus; by: string | null; at: string; note: string | null }[];
   createdAt: string;
   version: number;

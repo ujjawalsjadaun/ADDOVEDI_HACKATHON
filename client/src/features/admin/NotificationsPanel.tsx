@@ -7,7 +7,7 @@ import { StatCard } from '../../components/ui/StatCard';
 import { EmptyState, ErrorState, LoadingState } from '../../components/ui/states';
 import { StatusBadge, type BadgeTone } from '../../components/ui/StatusBadge';
 import { formatDateTime, relativeTime } from '../../lib/format';
-import { useNotificationHealth, useNotifications, useRetryNotification } from './api';
+import { useNotificationHealth, useNotifications, useRetryNotification, useSimulateMissedCall, useSimulateSmsReply } from './api';
 
 const STATUS: Record<NotificationStatus, { label: string; tone: BadgeTone }> = {
   pending: { label: 'queued', tone: 'amber' },
@@ -40,6 +40,7 @@ export function NotificationsPanel() {
         <StatCard label="Delivered (receipt)" value={h?.counts.delivered ?? 0} />
         <StatCard label="Failed" value={h?.counts.failed ?? 0} alertWhenNonZero="danger" />
       </div>
+      {h?.provider.simulated && <SimulateReply />}
       {h?.oldestPendingAt && <p className="text-sm text-amber-800">Oldest queued message waiting since {relativeTime(h.oldestPendingAt)}.</p>}
 
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -126,5 +127,44 @@ function NotificationRow({ n }: { n: NotificationView }) {
         />
       )}
     </li>
+  );
+}
+
+/** Types a donor's SMS reply as if the provider had received it — the same code path as a real inbound webhook. */
+function SimulateReply() {
+  const [from, setFrom] = useState('');
+  const [body, setBody] = useState('YES');
+  const reply = useSimulateSmsReply();
+  const missed = useSimulateMissedCall();
+  const simulate = missed.submittedAt > reply.submittedAt ? missed : reply;
+  return (
+    <form
+      className="card space-y-2"
+      onSubmit={(e) => {
+        e.preventDefault();
+        reply.mutate({ from: from.trim(), body });
+      }}
+    >
+      <h3 className="font-semibold">Simulate a donor’s SMS reply</h3>
+      <p className="text-xs text-slate-500">
+        Donors can answer an alert by SMS (“YES K7P2” / “NO K7P2”). With no real provider connected, type the reply here: it is applied exactly as the app would apply it.
+      </p>
+      <div className="flex flex-wrap gap-2">
+        <input className="input w-48" aria-label="Donor phone" placeholder="+919000000001" value={from} onChange={(e) => setFrom(e.target.value)} required />
+        <input className="input w-48" aria-label="SMS text" value={body} onChange={(e) => setBody(e.target.value)} maxLength={160} required />
+        <button type="submit" className="btn-primary" disabled={simulate.isPending}>
+          Apply reply
+        </button>
+        <button type="button" className="btn-secondary" disabled={missed.isPending || !from.trim()} onClick={() => missed.mutate({ from: from.trim() })}>
+          Simulate missed call ("available today")
+        </button>
+      </div>
+      {simulate.isError && <p role="alert" className="text-sm text-red-700">{simulate.error.message}</p>}
+      {simulate.data && (
+        <p role="status" className="rounded-md bg-slate-50 p-2 text-sm text-slate-800">
+          <strong>{simulate.data.outcome.replace('_', ' ')}</strong> — reply to donor: “{simulate.data.replyText}”
+        </p>
+      )}
+    </form>
   );
 }

@@ -4,11 +4,13 @@ import type {
   CreateHospitalInput,
   HospitalAdmin,
   HospitalDecisionInput,
+  HospitalStrikeInput,
   HospitalPublic,
   HospitalVerificationStatus,
   listHospitalsQuerySchema,
 } from '@golden-hour/shared';
 import { Types } from 'mongoose';
+import type { Config } from '../../config/env';
 import { AppError } from '../../lib/errors';
 import { toGeoPoint } from '../../lib/geo';
 import { withTransaction } from '../../lib/transaction';
@@ -121,6 +123,39 @@ export async function decideHospitalVerification(
         facilityId: doc._id,
         reason: input.reason,
         changes: { verificationStatus: [from, input.decision] },
+        requestId: ctx.requestId,
+      },
+      session,
+    );
+    return doc;
+  });
+  const counts = await staffCounts([updated._id]);
+  return toHospitalAdmin(updated, counts.get(id) ?? 0);
+}
+
+/**
+ * Records a strike against a facility for a false or abusive request. At the limit a verified facility is
+ * suspended in the same transaction (suspended facilities cannot raise requests); an admin can later reinstate it.
+ */
+export async function recordHospitalStrike(id: string, input: HospitalStrikeInput, ctx: ActionContext, config: Config): Promise<HospitalAdmin> {
+  const updated = await withTransaction(async (session) => {
+    const doc = await HospitalModel.findByIdAndUpdate(id, { $inc: { falseRequestStrikes: 1 } }, { new: true, session });
+    if (!doc) throw new AppError('NOT_FOUND', 'Not found.');
+    const suspend = doc.verificationStatus === 'verified' && doc.falseRequestStrikes >= config.HOSPITAL_STRIKE_LIMIT;
+    if (suspend) {
+      doc.verificationStatus = 'suspended';
+      doc.verification = { by: new Types.ObjectId(ctx.user.id), at: new Date(), reason: `Automatic: ${doc.falseRequestStrikes} false-request strikes. Latest: ${input.reason}` };
+      await doc.save({ session });
+    }
+    await recordAudit(
+      {
+        actor: userActor(ctx.user),
+        action: 'hospital.strike',
+        resourceType: 'hospital',
+        resourceId: doc._id,
+        facilityId: doc._id,
+        reason: input.reason,
+        detail: { strikes: doc.falseRequestStrikes, requestId: input.requestId, autoSuspended: suspend },
         requestId: ctx.requestId,
       },
       session,

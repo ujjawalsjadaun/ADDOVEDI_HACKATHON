@@ -33,7 +33,9 @@ export async function processEscalations(config: Config, logger: Logger): Promis
 
     // config.ESCALATION_STEPS_MIN default is [0, 5, 10, 15]
     for (let step = 1; step < config.ESCALATION_STEPS_MIN.length; step++) {
-      const stepMinutes = config.ESCALATION_STEPS_MIN[step]!;
+      // Planned (standard) needs are not emergencies: the ladder is stretched so donors are not nagged early.
+      const factor = (request.urgencyConfirmed ?? request.urgencySuggested) === 'standard' ? config.PLANNED_ESCALATION_FACTOR : 1;
+      const stepMinutes = config.ESCALATION_STEPS_MIN[step]! * factor;
       if (elapsedMin < stepMinutes) {
         // Steps are strictly increasing, so later steps cannot be due yet
         break;

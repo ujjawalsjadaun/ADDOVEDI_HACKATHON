@@ -17,5 +17,7 @@ export interface HospitalAdmin extends HospitalPublic {
   verificationStatus: HospitalVerificationStatus;
   verification: { by: string; at: string; reason: string } | null;
   staffCount: number;
+  /** False-request strikes recorded by administrators. */
+  strikes: number;
   createdAt: string;
 }

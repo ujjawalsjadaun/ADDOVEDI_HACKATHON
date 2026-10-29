@@ -90,6 +90,9 @@ function LeadRow({ lead }: { lead: FamilyLeadView }) {
             </svg>
             {lead.contactPhone}
           </a>
+          <span className={`rounded-md px-2 py-0.5 text-2xs font-bold ${lead.phoneVerified ? 'bg-emerald-50 text-emerald-800' : 'bg-slate-100 text-slate-600'}`}>
+            {lead.phoneVerified ? 'Number confirmed by SMS code' : 'Number not confirmed'}
+          </span>
           {lead.bloodGroup && (
             <span className="inline-flex items-center rounded-md bg-brand-50 px-2 py-0.5 font-mono text-xs font-bold text-brand-700 border border-brand-200">
               {lead.bloodGroup}

@@ -1,9 +1,11 @@
 import { randomBytes } from 'node:crypto';
-import type { AlertSummary, DonorAlertView } from '@golden-hour/shared';
+import type { AlertSummary, DonorAlertReportInput, DonorAlertView } from '@golden-hour/shared';
 import type { ClientSession, Types } from 'mongoose';
 import type { Config } from '../../config/env';
 import { AppError } from '../../lib/errors';
 import { withTransaction } from '../../lib/transaction';
+import { hmacHex } from '../../lib/crypto';
+import { SuspiciousReportModel } from '../public-checker/suspiciousReport.model';
 import { recordAudit, type AuditActor } from '../audit/audit.service';
 import type { AuthUser } from '../auth/auth.types';
 import { DonorProfileModel } from '../donors/donor.model';
@@ -67,6 +69,7 @@ export async function insertAlertBatch(
       response: 'pending',
       expiresAt: new Date(now.getTime() + config.ALERT_RESPONSE_WINDOW_MIN * 60_000),
       responseToken: randomBytes(16).toString('base64url'),
+      shortCode: newShortCode(),
     })),
     { session },
   );
@@ -85,6 +88,7 @@ export async function insertAlertBatch(
         deadlineText: formatDeadline(request.deadlineAt),
         checkUrl: `${config.PUBLIC_APP_URL}/check/${request.publicCode}`,
         appUrl: config.PUBLIC_APP_URL,
+        shortCode: alert.shortCode ?? undefined,
       },
     });
   }
@@ -101,6 +105,13 @@ export async function insertAlertBatch(
     session,
   );
   return chosen.map((c) => c.donorUserId);
+}
+
+/** 4 characters from an alphabet without look-alikes (no 0/O, 1/I). Only needs to be unique per donor's open alerts. */
+function newShortCode(): string {
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const bytes = randomBytes(4);
+  return Array.from(bytes, (b) => alphabet[b % alphabet.length]).join('');
 }
 
 /**
@@ -246,4 +257,26 @@ export async function summariseAlerts(requestId: Types.ObjectId): Promise<AlertS
     if (created && (!summary.lastBatchAt || created.toISOString() > summary.lastBatchAt)) summary.lastBatchAt = created.toISOString();
   }
   return summary;
+}
+
+/**
+ * A donor reports the request behind one of their alerts as suspicious. It lands in the same admin queue as
+ * public reports. The reporter is stored only as a keyed hash of the user id (one report per donor per
+ * request), so administrators see the report but not who filed it. Idempotent for repeats.
+ */
+export async function reportAlertSuspicious(alertId: string, input: DonorAlertReportInput, user: AuthUser, config: Config): Promise<void> {
+  const alert = await RequestAlertModel.findOne({ _id: alertId, donorUserId: user.id });
+  if (!alert) throw new AppError('NOT_FOUND', 'Not found.');
+  const request = await BloodRequestModel.findById(alert.requestId).select('publicCode');
+  if (!request) throw new AppError('NOT_FOUND', 'Not found.');
+  const reporterIpHash = hmacHex(config.SESSION_SECRET, `donor:${user.id}`);
+  if (await SuspiciousReportModel.exists({ requestId: request._id, reporterIpHash })) return;
+  await SuspiciousReportModel.create({
+    publicCode: request.publicCode,
+    requestId: request._id,
+    category: input.category,
+    note: input.note || null,
+    reporterIpHash,
+  });
+  publish('request', [rooms.role('admin')], request._id);
 }

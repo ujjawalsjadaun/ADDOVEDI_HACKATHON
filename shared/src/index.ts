@@ -8,6 +8,7 @@ export * from './schemas/donors';
 export * from './schemas/dashboard';
 export * from './schemas/geo';
 export * from './schemas/logistics';
+export * from './schemas/sms';
 export * from './bloodCompatibility';
 export * from './dto/auth';
 export * from './dto/hospital';

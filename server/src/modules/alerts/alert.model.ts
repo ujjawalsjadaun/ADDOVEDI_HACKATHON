@@ -32,6 +32,8 @@ const requestAlertSchema = new Schema(
     expiresAt: { type: Date, required: true },
     /** Random correlation token for future SMS YES/NO replies. */
     responseToken: { type: String, required: true },
+    /** Short code the donor types after YES/NO in an SMS reply (e.g. "YES K7P2"). Absent on alerts made before SMS replies. */
+    shortCode: { type: String },
   },
   { timestamps: true },
 );

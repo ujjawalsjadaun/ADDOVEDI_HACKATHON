@@ -5,6 +5,7 @@ import {
   createFamilyLeadSchema,
   FAMILY_LEAD_STATUSES,
   rejectFamilyLeadSchema,
+  verifyFamilyPhoneSchema,
   type FamilyLeadReceipt,
 } from '@golden-hour/shared';
 import type { Config } from '../../config/env';
@@ -15,7 +16,7 @@ import { actionContext, currentUser, requireRole } from '../../middleware/author
 import { createRateLimiter } from '../../middleware/rateLimit';
 import { requireIdempotencyKey, runIdempotent } from '../idempotency/idempotency.service';
 import { FamilyLeadModel } from './familyLead.model';
-import { confirmFamilyLead, listFamilyLeads, rejectFamilyLead, submitFamilyLead } from './familyLead.service';
+import { confirmFamilyLead, listFamilyLeads, rejectFamilyLead, submitFamilyLead, verifyFamilyPhone } from './familyLead.service';
 import { publish, rooms } from '../../realtime/emitter';
 
 const listQuery = z.object({ status: z.enum(FAMILY_LEAD_STATUSES).optional() });
@@ -32,13 +33,18 @@ export function familyLeadRoutes(config: Config): Router {
       // Anonymous: scope the key to a keyed hash of the IP, never the IP itself.
       { scope: 'family-leads.create', actorKey: hmacHex(config.SESSION_SECRET, `ip:${req.ip ?? 'unknown'}`), key, body: req.body },
       async () => {
-        const receipt = await submitFamilyLead(input, res.locals.requestId);
+        const receipt = await submitFamilyLead(input, res.locals.requestId, config);
         const lead = await FamilyLeadModel.findOne({ reference: receipt.reference }).select('_id');
         return { status: 202, resourceId: lead!._id, meta: receipt };
       },
     );
     if (!outcome.replayed) publish('lead', [rooms.facility(input.hospitalId)], outcome.resourceId);
     sendData<FamilyLeadReceipt>(res, outcome.meta!, { status: outcome.status });
+  });
+
+  const verifyLimiter = createRateLimiter({ windowMs: 60 * 60_000, limit: 20, keyBy: 'ip' });
+  router.post('/verify-phone', verifyLimiter, async (req, res) => {
+    sendData(res, await verifyFamilyPhone(parse(verifyFamilyPhoneSchema, req.body), config));
   });
 
   router.get('/', requireRole('hospital_staff'), async (req, res) => {

@@ -1,4 +1,4 @@
-import { eligibleDonorGroups, type Candidate, type CandidatePreview, type EtaSnapshot } from '@golden-hour/shared';
+import { eligibleDonorGroups, type Candidate, type CandidatePreview, type Reachability, type EtaSnapshot } from '@golden-hour/shared';
 import type { Types } from 'mongoose';
 import type { Config } from '../../config/env';
 import { fromGeoPoint, haversineKm } from '../../lib/geo';
@@ -121,10 +121,39 @@ export async function matchDonors(
   };
 }
 
+const BANDS: { label: string; max: number }[] = [
+  { label: 'under 15 min', max: 15 },
+  { label: '15–30 min', max: 30 },
+  { label: '30–60 min', max: 60 },
+  { label: '1–2 h', max: 120 },
+  { label: 'over 2 h', max: Number.POSITIVE_INFINITY },
+];
+
+/** Aggregates the ranked list into counts. Manual-review donors (unknown last donation) are excluded: they are never auto-alerted. */
+export function summariseReachability(ranked: Candidate[]): Reachability {
+  const counts = BANDS.map(() => 0);
+  let beforeDeadline = 0;
+  let afterDeadline = 0;
+  let unknown = 0;
+  for (const c of ranked) {
+    const minutes = c.eta?.minutes ?? null;
+    if (minutes === null) {
+      unknown++;
+      continue;
+    }
+    counts[BANDS.findIndex((b) => minutes < b.max)]!++;
+    if (c.beforeDeadline === false) afterDeadline++;
+    else beforeDeadline++;
+  }
+  return { bands: BANDS.map((b, i) => ({ label: b.label, count: counts[i]! })), beforeDeadline, afterDeadline, unknown, assessed: ranked.length };
+}
+
 export function toCandidatePreview(result: MatchResult): CandidatePreview {
   const strip = ({ profileId: _profileId, ...c }: RankedCandidate): Candidate => c;
+  const ranked = result.ranked.map(strip);
   return {
-    ranked: result.ranked.map(strip),
+    reachability: summariseReachability(ranked),
+    ranked,
     manualReview: result.manualReview.map(strip),
     alreadyAlerted: result.alreadyAlerted,
     cooldownRelaxed: result.cooldownRelaxed,

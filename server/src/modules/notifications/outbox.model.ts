@@ -10,7 +10,9 @@ const outboxSchema = new Schema(
     eventId: { type: String, required: true },
     type: { type: String, enum: NOTIFICATION_TYPES, required: true },
     channel: { type: String, enum: ['sms'], required: true },
-    recipientUserId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    /** Exactly one of these identifies the recipient. Family leads have no account; their number is read from the lead at send time. */
+    recipientUserId: { type: Schema.Types.ObjectId, ref: 'User', default: null },
+    recipientLeadId: { type: Schema.Types.ObjectId, ref: 'FamilyLead', default: null },
     requestId: { type: Schema.Types.ObjectId, ref: 'BloodRequest', default: null },
     /** Template variables only — public code, facility, blood group, deadline. No patient data. */
     vars: { type: Schema.Types.Mixed, required: true },

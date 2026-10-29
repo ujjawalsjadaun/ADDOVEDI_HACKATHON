@@ -9,7 +9,7 @@ import { EmptyState, ErrorState, LoadingState } from '../../components/ui/states
 import { StatusBadge } from '../../components/ui/StatusBadge';
 import { formatDateTime, relativeTime } from '../../lib/format';
 import { ALERT_RESPONSE, ASSIGNMENT_STATUS } from '../../lib/labels';
-import { useDonorAlerts, useDonorAssignments, useDonorProfile, useRespondAlert, useSetAvailability, useUpdateAssignment } from './api';
+import { useDonorAlerts, useDonorAssignments, useDonorProfile, useReportAlert, useRespondAlert, useSetAvailability, useUpdateAssignment } from './api';
 
 export function DonorHomePage() {
   const profile = useDonorProfile();
@@ -186,6 +186,7 @@ function AvailabilityCard({ availability, stale, updatedAt }: { availability: 'a
 
 function PendingAlert({ alert, busy }: { alert: DonorAlertView; busy: boolean }) {
   const respond = useRespondAlert();
+  const report = useReportAlert();
 
   return (
     <li className="overflow-hidden rounded-2xl border-2 border-brand-300 bg-white p-6 shadow-md space-y-4">
@@ -243,6 +244,20 @@ function PendingAlert({ alert, busy }: { alert: DonorAlertView; busy: boolean })
           Cannot Make It
         </button>
       </div>
+
+      {report.isSuccess ? (
+        <p role="status" className="text-xs font-semibold text-emerald-800">Thank you — administrators will review this request. Your report is anonymous to them.</p>
+      ) : (
+        <button
+          type="button"
+          className="text-xs font-semibold text-slate-500 underline hover:text-red-700"
+          disabled={report.isPending}
+          onClick={() => report.mutate({ alertId: alert.id, category: 'fake_request' })}
+        >
+          This looks fake — report it
+        </button>
+      )}
+      <FormError error={report.error} />
 
       <p className="text-[11px] text-slate-400">
         Clinical eligibility (hemoglobin, recent rest period) is evaluated by hospital staff upon arrival.

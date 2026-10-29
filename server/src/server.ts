@@ -10,6 +10,7 @@ import { startRealtime } from './realtime/socket';
 import { startOutboxWorker } from './workers/outboxWorker';
 import { startEscalationWorker } from './workers/escalationWorker';
 import { startExpiryWorker } from './workers/expiryWorker';
+import { startMissedEtaWorker } from './workers/missedEtaWorker';
 
 if (existsSync('.env')) process.loadEnvFile('.env');
 
@@ -72,6 +73,7 @@ const io = startRealtime(httpServer, config, logger);
 const stopOutbox = startOutboxWorker(config, logger);
 const stopEscalation = startEscalationWorker(config, logger);
 const stopExpiry = startExpiryWorker(config, logger);
+const stopMissedEta = startMissedEtaWorker(config, logger);
 
 httpServer.listen(config.PORT, () => {
   logger.info(`API listening on http://localhost:${config.PORT} (env=${config.NODE_ENV}, demoMode=${config.DEMO_MODE})`);
@@ -86,6 +88,7 @@ async function shutdown(signal: string) {
   stopOutbox();
   stopEscalation();
   stopExpiry();
+  stopMissedEta();
   await io.close();
   httpServer.close();
   await disconnectDb().catch(() => undefined);

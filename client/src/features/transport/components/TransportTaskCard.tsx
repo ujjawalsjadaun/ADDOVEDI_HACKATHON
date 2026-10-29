@@ -52,6 +52,11 @@ export function TransportTaskCard({ task: t, showRequest = true }: { task: Trans
         <div className="flex flex-wrap items-center gap-2">
           <span className="font-bold text-slate-900">{KIND_LABEL[t.kind]}</span>
           <StatusBadge status={t.status} label={s.label} tone={s.tone} />
+          {t.relay && (
+            <span className="rounded-md bg-brand-50 px-2 py-0.5 text-2xs font-bold text-brand-700 ring-1 ring-brand-700/20">
+              Relay leg {t.relay.leg} of 2 · handover at {t.relay.handoverPoint}
+            </span>
+          )}
           {showRequest && (
             <span className="text-xs text-slate-500 font-medium">
               <span className="font-mono font-bold text-slate-700">{t.request.publicCode}</span> · {t.request.bloodGroup} · {t.facility.name}
@@ -65,6 +70,9 @@ export function TransportTaskCard({ task: t, showRequest = true }: { task: Trans
         )}
       </div>
 
+      {t.relay?.leg === 2 && !['handed_over', 'completed'].includes(t.relay.otherLegStatus ?? '') && ['requested', 'assigned'].includes(t.status) && (
+        <p className="rounded-lg bg-amber-50 p-2 text-xs font-medium text-amber-900">Waiting for the first leg to reach the handover point before this leg can start.</p>
+      )}
       <div className="grid gap-3 rounded-xl border border-slate-100 bg-slate-50/60 p-3 text-xs sm:grid-cols-2">
         <div className="space-y-1">
           <div className="flex items-center gap-1.5 font-bold text-2xs uppercase tracking-wider text-slate-500">

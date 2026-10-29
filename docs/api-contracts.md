@@ -249,3 +249,42 @@ Implemented in Phase 9 as a **single event** `change` with payload `RealtimeEven
 | `GET /admin/notifications?status=` | ADM | paginated `NotificationView[]` incl. rendered body, masked number, attempts, last error |
 | `GET /admin/notifications/health` | ADM | `NotificationQueueHealth`: provider (simulated?), counts by status, oldest queued |
 | `POST /admin/notifications/:id/retry` | ADM | `{ reason }` — re-queues a **failed** message; audited (`notification.retried`) |
+
+### SMS replies (pitch gap: low-signal donors answer by SMS)
+| Method & path | Role | Notes |
+| --- | --- | --- |
+| `POST /sms/inbound` | provider (`x-sms-secret`) | `{ from, body }` → `SmsReplyResult { outcome, replyText }`. 404 when `INBOUND_SMS_SECRET` is unset or wrong. Rate-limited (120/min/IP) |
+| `POST /admin/sms/simulate-reply` | ADM | Same body/result; same code path; audited (`admin.sms_reply_simulated`). For demos without a real provider |
+
+Reply grammar: `YES|Y|NO|N` plus an optional 4-character code from the alert SMS. The sender is matched by registered phone; the answer is applied through `acceptAlert` / `declineAlert`, so all app rules (busy donor, filled slots, expiry, idempotent repeat) apply unchanged. Several open alerts and no code → `needs_code`. Audited as `donor.sms_reply` (phone masked).
+
+### Hospital strikes
+| Method & path | Role | Notes |
+| --- | --- | --- |
+| `POST /admin/hospitals/:id/strike` | ADM | `{ reason, requestId? }` → `HospitalAdmin` (with `strikes`). At `HOSPITAL_STRIKE_LIMIT` a verified facility is suspended in the same transaction. Audited `hospital.strike` |
+
+### Donor report from an alert
+| Method & path | Role | Notes |
+| --- | --- | --- |
+| `POST /alerts/:id/report` | DON (own alert) | `{ category, note? }` → `{ reported: true }`. Lands in the admin suspicious-reports queue; reporter stored only as a keyed hash of the user id (one report per donor per request, repeats are no-ops). 10 per 10 min per user |
+
+### Family number confirmation and SMS updates
+| Method & path | Role | Notes |
+| --- | --- | --- |
+| `POST /family-leads` | public | Receipt now has `phoneVerificationRequired: true`; a 6-digit code is texted (outbox type `family_phone_code`) to the number given |
+| `POST /family-leads/verify-phone` | public | `{ reference, code }` → `{ verified: true }`. Generic error on any mismatch; 5 wrong tries kill the code; 20/h/IP |
+
+`FamilyLeadView.phoneVerified` tells staff whether the number was confirmed. Status texts (`family_lead_update`: confirmed, rejected, closed) go **only** to confirmed numbers; otherwise the outbox row fails with `PHONE_NOT_CONFIRMED`. Updates never include the patient, blood group or clinical details — only facility name and public code.
+
+### Missed call = "available today"
+| Method & path | Role | Notes |
+| --- | --- | --- |
+| `POST /sms/missed-call` | provider (`x-sms-secret`) | `{ from }` → `SmsReplyResult` (`availability_refreshed`). Marks the registered donor available and refreshes `availabilityUpdatedAt` (availability older than 30 days stops matching). Never accepts an alert. 404 when `INBOUND_SMS_SECRET` is unset |
+| `POST /admin/sms/simulate-missed-call` | ADM | Same body/result; audited `admin.missed_call_simulated`. Donor-side audit: `donor.missed_call_available` |
+
+### Relay transport
+`POST /transport-tasks` accepts `relayPoint: { label, location? }` for `donor_pickup`. It creates **two linked tasks** in one transaction: leg 1 (pickup → handover point, carries the donor's `assignmentId`) and leg 2 (handover point → dropoff). `TransportTaskView.relay = { leg, handoverPoint, otherLegStatus }`.
+- Leg 2 can be claimed only after leg 1 is `handed_over`/`completed`.
+- Leg 1 is confirmed received (`complete`) by the leg-2 coordinator or facility staff.
+- If leg 1 fails or is cancelled, an unfinished leg 2 is cancelled automatically.
+- Transport state still never changes request or assignment state.

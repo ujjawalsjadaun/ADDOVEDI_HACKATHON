@@ -239,6 +239,10 @@ Validated with Zod at startup in `server/src/config/env.ts`. Server refuses to s
 | `SMS_PROVIDER` | no | `simulated` | `simulated` only in MVP |
 | `PUBLIC_APP_URL` | no | `http://localhost:5173` | Base URL used for links inside SMS |
 | `SIMULATED_SMS_FAILURE_RATE` | no | `0` | Share (0–1) of simulated sends that fail transiently, to demonstrate retries |
+| `PLANNED_ESCALATION_FACTOR` | no | `3` | Multiplier (1–10) on escalation step times for planned (standard-urgency) requests |
+| `HOSPITAL_STRIKE_LIMIT` | no | `3` | False-request strikes after which a verified facility is suspended automatically |
+| `NO_SHOW_GRACE_MIN` | no | `30` | Minutes past a donor's own ETA before an accepted/en-route donor is auto-released as `no_show` and the next donors are alerted |
+| `INBOUND_SMS_SECRET` | no | unset | ≥32 chars. Shared secret an SMS provider sends as `x-sms-secret` to `POST /api/sms/inbound`. Unset = that webhook answers 404 |
 | `OUTBOX_MAX_ATTEMPTS` | no | `5` | After this many failed attempts a message is marked failed |
 | `OUTBOX_POLL_MS` | no | `3000` | Outbox worker interval |
 | `PROVIDER_TIMEOUT_MS` | no | `4000` | Per external call |

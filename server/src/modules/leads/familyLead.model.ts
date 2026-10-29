@@ -10,6 +10,10 @@ const familyLeadSchema = new Schema(
     contactName: { type: String, required: true, trim: true },
     /** Needed for the hospital to call back; staff of the chosen facility only. */
     contactPhone: { type: String, required: true },
+    phoneVerified: { type: Boolean, default: false },
+    /** Keyed hash of the 6-digit confirmation code; never the code itself. */
+    phoneCodeHash: { type: String, default: null },
+    phoneCodeAttempts: { type: Number, default: 0 },
     bloodGroup: { type: String, enum: [...BLOOD_GROUPS, null], default: null },
     note: { type: String, default: null },
     status: { type: String, enum: FAMILY_LEAD_STATUSES, default: 'pending' },

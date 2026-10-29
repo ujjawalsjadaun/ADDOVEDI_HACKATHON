@@ -96,7 +96,7 @@ export function HomePage() {
         </ol>
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl bg-slate-950 px-5 py-4 text-sm text-slate-200">
           <span className="eyebrow text-brand-300">If nobody accepts</span>
-          {['0 min · first donors alerted', '5 min · search widens', '10 min · hospital told to check its blood bank', '15 min · administrators step in'].map((t) => (
+          {['0 min · first donors alerted', '5 min · search widens', '10 min · hospital told to check its blood bank', '15 min · administrators step in', 'Planned needs: timers run 3× slower'].map((t) => (
             <span key={t} className="rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs font-semibold">
               {t}
             </span>

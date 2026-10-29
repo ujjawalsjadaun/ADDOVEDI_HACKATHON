@@ -22,6 +22,13 @@ export const hospitalDecisionSchema = z.object({
 });
 export type HospitalDecisionInput = z.infer<typeof hospitalDecisionSchema>;
 
+/** A strike for a false or abusive request raised by a facility. Reaching the limit suspends it automatically. */
+export const hospitalStrikeSchema = z.object({
+  reason: reasonSchema,
+  requestId: objectIdSchema.optional(),
+});
+export type HospitalStrikeInput = z.infer<typeof hospitalStrikeSchema>;
+
 export const listHospitalsQuerySchema = paginationQuerySchema.extend({
   verificationStatus: z.enum(HOSPITAL_VERIFICATION_STATUSES).optional(),
 });

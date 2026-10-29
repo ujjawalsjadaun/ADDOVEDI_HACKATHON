@@ -114,7 +114,22 @@ export interface Candidate {
   rank: number;
 }
 
+/** Privacy-safe summary of who could reach the hospital in time: counts only, no names or places. */
+export interface Reachability {
+  /** Eligible donors by road time to the hospital. */
+  bands: { label: string; count: number }[];
+  /** Eligible donors whose estimated arrival is before the request deadline. */
+  beforeDeadline: number;
+  /** Estimated to arrive after the deadline. */
+  afterDeadline: number;
+  /** Travel time unknown (routing unavailable or a blocked road) — never counted as reachable. */
+  unknown: number;
+  /** Only the nearest donors get a routing estimate; farther eligible donors are not counted here. */
+  assessed: number;
+}
+
 export interface CandidatePreview {
+  reachability: Reachability;
   /** Would be alerted automatically, in order. */
   ranked: Candidate[];
   /** Otherwise eligible but last donation date unknown — hospital decides, never auto-alerted. */
