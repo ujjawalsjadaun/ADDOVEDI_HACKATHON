@@ -1,10 +1,11 @@
-import type { HospitalAdmin, HospitalPublic } from '@golden-hour/shared';
+import { hospitalSmsCode, type HospitalAdmin, type HospitalPublic } from '@golden-hour/shared';
 import { fromGeoPoint } from '../../lib/geo';
 import type { HospitalDocument } from './hospital.model';
 
 export function toHospitalPublic(doc: HospitalDocument): HospitalPublic {
   return {
     id: doc._id.toString(),
+    smsCode: hospitalSmsCode(doc.name),
     name: doc.name,
     facilityType: doc.facilityType,
     district: doc.district,

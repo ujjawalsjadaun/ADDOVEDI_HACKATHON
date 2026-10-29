@@ -1,8 +1,11 @@
+import { useState } from 'react';
 import { Link, useLocation, useParams } from 'react-router';
 import { DataFreshness } from '../../components/ui/DataFreshness';
 import { ErrorState, LoadingState } from '../../components/ui/states';
 import { StatusBadge } from '../../components/ui/StatusBadge';
 import { formatDateTime, relativeTime } from '../../lib/format';
+import { useHospitalStrike } from '../admin/api';
+import { ReasonForm } from '../../components/ui/ReasonForm';
 import { useRequest } from './api';
 import { AssignmentsPanel } from './components/AssignmentsPanel';
 import { CandidatesPanel } from './components/CandidatesPanel';
@@ -205,6 +208,8 @@ export function RequestDetailPage({ basePath = '/hospital/requests' }: { basePat
         </section>
       )}
 
+      {basePath.startsWith('/admin') && <FalseRequestStrike facilityId={r.facilityId} facilityName={r.facility.name} requestId={r.id} />}
+
       <RequestActions request={r} />
 
       <AssignmentsPanel request={r} />
@@ -227,5 +232,29 @@ function Item({ label, children }: { label: string; children: React.ReactNode })
       <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</dt>
       <dd className="text-slate-800">{children}</dd>
     </div>
+  );
+}
+
+/** Admin: a request judged fake earns its facility a strike (reject the request itself with the actions below). */
+function FalseRequestStrike({ facilityId, facilityName, requestId }: { facilityId: string; facilityName: string; requestId: string }) {
+  const [open, setOpen] = useState(false);
+  const strike = useHospitalStrike();
+  if (strike.isSuccess) {
+    return <p role="status" className="rounded-xl bg-emerald-50 p-3 text-sm font-medium text-emerald-900">Strike recorded against {facilityName}. At the limit the facility is suspended automatically.</p>;
+  }
+  return open ? (
+    <ReasonForm
+      title={`Record a false-request strike against ${facilityName}?`}
+      confirmLabel="Record strike"
+      danger
+      pending={strike.isPending}
+      error={strike.error}
+      onCancel={() => setOpen(false)}
+      onConfirm={(reason) => strike.mutate({ id: facilityId, reason, requestId })}
+    />
+  ) : (
+    <button type="button" className="btn-secondary text-red-700" onClick={() => setOpen(true)}>
+      This request is fake — record a strike for {facilityName}
+    </button>
   );
 }

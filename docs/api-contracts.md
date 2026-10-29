@@ -288,3 +288,15 @@ Reply grammar: `YES|Y|NO|N` plus an optional 4-character code from the alert SMS
 - Leg 1 is confirmed received (`complete`) by the leg-2 coordinator or facility staff.
 - If leg 1 fails or is cancelled, an unfinished leg 2 is cancelled automatically.
 - Transport state still never changes request or assignment state.
+
+### Coordinator vouching for a family
+| Method & path | Role | Notes |
+| --- | --- | --- |
+| `POST /family-leads/vouch` | COO | `{ reference, note }` → `{ recorded: true }` — identical answer whether or not the reference exists (no probing). Stores `vouch { by, at, note }` on a pending lead; audited `lead.vouched`. 30/h/user. Staff see it as `FamilyLeadView.vouch` |
+
+### Family by SMS, status texts, ambulance point (pitch slide 15)
+`POST /sms/inbound` (and the admin simulator) now also understands families:
+- `BLOOD <group> <hospital code> [patient id]` → a pending family lead, same as the web form (`family_request_received`). The hospital code is `HospitalPublic.smsCode`, derived from the facility name (`Siang Hills District Hospital` → `Siang-HDH`); unknown or ambiguous codes are rejected.
+- A bare 6-digit code from the lead's number → number confirmed (`family_phone_confirmed`), with the same 5-attempt limit as the web page.
+
+Status texts to a confirmed family number (`family_lead_update`): `confirmed` (with the facility's nearest ambulance point, if set), `alerted` (n donors), `donor_accepted` (k of n units), `donor_en_route`, `donor_arrived`, `closed`, `rejected`. They carry no patient, donor or blood-group detail.

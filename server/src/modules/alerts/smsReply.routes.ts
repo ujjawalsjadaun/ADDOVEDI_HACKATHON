@@ -27,7 +27,7 @@ export function inboundSmsRoutes(config: Config): Router {
     if (!config.INBOUND_SMS_SECRET || !secretMatches(req.get('x-sms-secret'), config.INBOUND_SMS_SECRET)) {
       throw new AppError('NOT_FOUND', 'Not found.');
     }
-    sendData(res, await handleSmsReply(parse(smsReplySchema, req.body), res.locals.requestId));
+    sendData(res, await handleSmsReply(parse(smsReplySchema, req.body), config, res.locals.requestId));
   });
   router.post('/missed-call', createRateLimiter({ windowMs: 60_000, limit: 120, keyBy: 'ip' }), async (req, res) => {
     if (!config.INBOUND_SMS_SECRET || !secretMatches(req.get('x-sms-secret'), config.INBOUND_SMS_SECRET)) {
@@ -39,12 +39,12 @@ export function inboundSmsRoutes(config: Config): Router {
 }
 
 /** POST /api/admin/sms/simulate-reply — lets an administrator type a donor's reply (demo without a real provider). Audited. */
-export function adminSmsRoutes(): Router {
+export function adminSmsRoutes(config: Config): Router {
   const router = Router();
   router.post('/simulate-reply', async (req, res) => {
     const input = parse(smsReplySchema, req.body);
     const ctx = actionContext(res);
-    const result = await handleSmsReply(input, ctx.requestId);
+    const result = await handleSmsReply(input, config, ctx.requestId);
     await recordAudit({
       actor: userActor(ctx.user),
       action: 'admin.sms_reply_simulated',

@@ -10,6 +10,7 @@ export * from './schemas/geo';
 export * from './schemas/logistics';
 export * from './schemas/sms';
 export * from './bloodCompatibility';
+export * from './hospitalSmsCode';
 export * from './dto/auth';
 export * from './dto/hospital';
 export * from './dto/user';

@@ -15,7 +15,7 @@ import type { Config } from '../../config/env';
 import { AppError } from '../../lib/errors';
 import { coarsen, toGeoPoint } from '../../lib/geo';
 import { isDuplicateKeyError, withTransaction } from '../../lib/transaction';
-import { recordAudit, userActor } from '../audit/audit.service';
+import { recordAudit, SYSTEM_ACTOR, userActor } from '../audit/audit.service';
 import { toAuthUser } from '../auth/auth.dto';
 import type { ActionContext, AuthUser } from '../auth/auth.types';
 import { hashPassword } from '../auth/password';
@@ -155,7 +155,7 @@ export async function setAvailability(availability: DonorAvailability, ctx: Acti
 /** Adds a no-show strike inside the caller's transaction; at the threshold, places the donor under admin review. */
 export async function recordStrike(
   session: ClientSession,
-  args: { donorUserId: Types.ObjectId; requestId: Types.ObjectId; reason: string; ctx: ActionContext },
+  args: { donorUserId: Types.ObjectId; requestId: Types.ObjectId; reason: string; ctx?: ActionContext },
 ): Promise<void> {
   const profile = await DonorProfileModel.findOneAndUpdate(
     { userId: args.donorUserId },
@@ -166,13 +166,13 @@ export async function recordStrike(
   await DonorProfileModel.updateOne({ _id: profile._id }, { $set: { reviewStatus: 'under_review' } }, { session });
   await recordAudit(
     {
-      actor: userActor(args.ctx.user),
+      actor: args.ctx ? userActor(args.ctx.user) : SYSTEM_ACTOR,
       action: 'donor.placed_under_review',
       resourceType: 'user',
       resourceId: args.donorUserId,
       reason: `${STRIKE_THRESHOLD} missed donations within 180 days`,
       changes: { reviewStatus: ['ok', 'under_review'] },
-      requestId: args.ctx.requestId,
+      requestId: args.ctx?.requestId,
     },
     session,
   );

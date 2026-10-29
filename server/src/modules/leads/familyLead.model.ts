@@ -13,6 +13,13 @@ const familyLeadSchema = new Schema(
     phoneVerified: { type: Boolean, default: false },
     /** Keyed hash of the 6-digit confirmation code; never the code itself. */
     phoneCodeHash: { type: String, default: null },
+    vouch: {
+      type: new Schema(
+        { by: { type: Schema.Types.ObjectId, ref: 'User', required: true }, at: { type: Date, required: true }, note: { type: String, required: true } },
+        { _id: false },
+      ),
+      default: null,
+    },
     phoneCodeAttempts: { type: Number, default: 0 },
     bloodGroup: { type: String, enum: [...BLOOD_GROUPS, null], default: null },
     note: { type: String, default: null },

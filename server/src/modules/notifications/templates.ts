@@ -27,11 +27,16 @@ export interface FamilyPhoneCodeVars {
 }
 
 export interface FamilyLeadUpdateVars {
-  event: 'confirmed' | 'rejected' | 'closed';
+  event: 'confirmed' | 'rejected' | 'closed' | 'alerted' | 'donor_accepted' | 'donor_en_route' | 'donor_arrived';
   facilityName: string;
   publicCode?: string;
   checkUrl?: string;
   outcome?: 'fulfilled' | 'cancelled' | 'expired';
+  /** alerted: donors alerted in this batch. donor_accepted: units covered so far / needed. */
+  count?: number;
+  needed?: number;
+  /** Nearest point an ambulance can reach, if the facility has marked one. */
+  ambulancePointText?: string;
 }
 
 export type TemplateVars = DonorAlertVars | RequestClosedVars | FamilyPhoneCodeVars | FamilyLeadUpdateVars;
@@ -56,7 +61,14 @@ export function renderSms(type: NotificationType, vars: TemplateVars): string {
     }
     case 'family_lead_update': {
       const v = vars as FamilyLeadUpdateVars;
-      if (v.event === 'confirmed') return `Golden Hour: ${v.facilityName} has confirmed your request and raised an official request, code ${v.publicCode}. Anyone can check it at ${v.checkUrl}. The hospital will contact you.`;
+      if (v.event === 'confirmed') {
+        const ambulance = v.ambulancePointText ? ` Nearest ambulance point: ${v.ambulancePointText}.` : '';
+        return `Golden Hour: ${v.facilityName} has confirmed your request and raised an official request, code ${v.publicCode}. Anyone can check it at ${v.checkUrl}. The hospital will contact you.${ambulance}`;
+      }
+      if (v.event === 'alerted') return `Golden Hour: ${v.facilityName} confirmed. ${v.count} donor${v.count === 1 ? '' : 's'} alerted for request ${v.publicCode}.`;
+      if (v.event === 'donor_accepted') return `Golden Hour: a donor has accepted request ${v.publicCode} (${v.count} of ${v.needed} unit${v.needed === 1 ? '' : 's'} covered).`;
+      if (v.event === 'donor_en_route') return `Golden Hour: a donor is on the way to ${v.facilityName} for request ${v.publicCode}.`;
+      if (v.event === 'donor_arrived') return `Golden Hour: a donor has arrived at ${v.facilityName} for request ${v.publicCode}.`;
       if (v.event === 'rejected') return `Golden Hour: ${v.facilityName} could not take your online request. Please call or visit the hospital directly.`;
       const why = v.outcome === 'fulfilled' ? 'the need has been met' : v.outcome === 'expired' ? 'it has expired' : 'it was cancelled';
       return `Golden Hour: request ${v.publicCode} at ${v.facilityName} is closed — ${why}.`;

@@ -26,6 +26,8 @@ export interface FamilyLeadView {
   contactPhone: string;
   /** True once the family typed the code texted to this number. */
   phoneVerified: boolean;
+  /** A local coordinator who vouches that the request is genuine. A signal for staff, never a replacement for their confirmation. */
+  vouch: { by: string | null; at: string; note: string } | null;
   bloodGroup: BloodGroup | null;
   note: string | null;
   status: FamilyLeadStatus;

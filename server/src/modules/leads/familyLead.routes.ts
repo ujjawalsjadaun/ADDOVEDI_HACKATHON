@@ -6,6 +6,7 @@ import {
   FAMILY_LEAD_STATUSES,
   rejectFamilyLeadSchema,
   verifyFamilyPhoneSchema,
+  vouchFamilyLeadSchema,
   type FamilyLeadReceipt,
 } from '@golden-hour/shared';
 import type { Config } from '../../config/env';
@@ -16,7 +17,7 @@ import { actionContext, currentUser, requireRole } from '../../middleware/author
 import { createRateLimiter } from '../../middleware/rateLimit';
 import { requireIdempotencyKey, runIdempotent } from '../idempotency/idempotency.service';
 import { FamilyLeadModel } from './familyLead.model';
-import { confirmFamilyLead, listFamilyLeads, rejectFamilyLead, submitFamilyLead, verifyFamilyPhone } from './familyLead.service';
+import { confirmFamilyLead, listFamilyLeads, rejectFamilyLead, submitFamilyLead, verifyFamilyPhone, vouchForFamilyLead } from './familyLead.service';
 import { publish, rooms } from '../../realtime/emitter';
 
 const listQuery = z.object({ status: z.enum(FAMILY_LEAD_STATUSES).optional() });
@@ -45,6 +46,10 @@ export function familyLeadRoutes(config: Config): Router {
   const verifyLimiter = createRateLimiter({ windowMs: 60 * 60_000, limit: 20, keyBy: 'ip' });
   router.post('/verify-phone', verifyLimiter, async (req, res) => {
     sendData(res, await verifyFamilyPhone(parse(verifyFamilyPhoneSchema, req.body), config));
+  });
+
+  router.post('/vouch', requireRole('coordinator'), createRateLimiter({ windowMs: 60 * 60_000, limit: 30, keyBy: 'user' }), async (req, res) => {
+    sendData(res, await vouchForFamilyLead(parse(vouchFamilyLeadSchema, req.body), actionContext(res)));
   });
 
   router.get('/', requireRole('hospital_staff'), async (req, res) => {

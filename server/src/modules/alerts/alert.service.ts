@@ -5,6 +5,7 @@ import type { Config } from '../../config/env';
 import { AppError } from '../../lib/errors';
 import { withTransaction } from '../../lib/transaction';
 import { hmacHex } from '../../lib/crypto';
+import { notifyFamilyOfRequest } from '../leads/familyNotify';
 import { SuspiciousReportModel } from '../public-checker/suspiciousReport.model';
 import { recordAudit, type AuditActor } from '../audit/audit.service';
 import type { AuthUser } from '../auth/auth.types';
@@ -92,6 +93,7 @@ export async function insertAlertBatch(
       },
     });
   }
+  await notifyFamilyOfRequest(session, request._id, `alerted:${args.batch}`, { event: 'alerted', count: created.length });
   await recordAudit(
     {
       actor: args.actor,

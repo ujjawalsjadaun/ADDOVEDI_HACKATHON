@@ -23,6 +23,6 @@ export function adminRoutes(config: Config): Router {
   router.use('/audit', adminAuditRoutes());
   router.use('/suspicious-reports', adminReportRoutes());
   router.use('/notifications', adminNotificationRoutes(config));
-  router.use('/sms', adminSmsRoutes());
+  router.use('/sms', adminSmsRoutes(config));
   return router;
 }

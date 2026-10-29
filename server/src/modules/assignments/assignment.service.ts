@@ -19,6 +19,7 @@ import { enqueueNotification } from '../notifications/outbox.service';
 import { publish, rooms } from '../../realtime/emitter';
 import { recordStrike } from '../donors/donor.service';
 import { FamilyLeadModel } from '../leads/familyLead.model';
+import { notifyFamilyOfRequest } from '../leads/familyNotify';
 import { HospitalModel } from '../hospitals/hospital.model';
 import { BloodRequestModel } from '../requests/request.model';
 import { UserModel } from '../users/user.model';
@@ -169,6 +170,7 @@ export async function acceptAlert(alertId: string, user: AuthUser, httpRequestId
         await cancelPendingAlerts(session, claimed._id);
       }
       await recordAudit(auditOnRequest(userActor(user), created!, 'donor.accepted', { requestId: httpRequestId }), session);
+      await notifyFamilyOfRequest(session, claimed._id, `accepted:${created!._id.toString()}`, { event: 'donor_accepted', count: claimed.slotsFilled, needed: claimed.unitsRequested });
       return created!;
     });
   } catch (err) {
@@ -208,6 +210,7 @@ export async function updateDonorAssignment(
     if (input.status === 'en_route') {
       const a = await transitionAssignment(session, { id, expectedVersion: input.expectedVersion, from: DONOR_ACTION_FROM.en_route, update: { $set: { status: 'en_route', enRouteAt: now } } });
       await recordAudit(auditOnRequest(userActor(ctx.user), a, 'donor.en_route', { requestId: ctx.requestId }), session);
+      await notifyFamilyOfRequest(session, a.requestId, `en_route:${a._id.toString()}`, { event: 'donor_en_route' });
       return a;
     }
     if (input.status === 'arrived') {
@@ -218,6 +221,7 @@ export async function updateDonorAssignment(
         update: { $set: { status: 'arrived', arrivedAt: now, arrivedBy: 'donor_reported' } },
       });
       await recordAudit(auditOnRequest(userActor(ctx.user), a, 'donor.arrived', { requestId: ctx.requestId }), session);
+      await notifyFamilyOfRequest(session, a.requestId, `arrived:${a._id.toString()}`, { event: 'donor_arrived' });
       return a;
     }
     const a = await transitionAssignment(session, {
@@ -248,6 +252,7 @@ export async function confirmArrival(id: string, expectedVersion: number, ctx: A
       update: { $set: { status: 'arrived', arrivedAt: current.arrivedAt ?? new Date(), arrivedBy: 'hospital_confirmed' } },
     });
     await recordAudit(auditOnRequest(userActor(ctx.user), a, 'assignment.arrival_confirmed', { requestId: ctx.requestId }), session);
+    await notifyFamilyOfRequest(session, a.requestId, `arrived:${a._id.toString()}`, { event: 'donor_arrived' });
     return a;
   });
   announceAssignment(done);
@@ -372,8 +377,8 @@ export async function listForDonor(user: AuthUser): Promise<DonorAssignmentView[
 /**
  * Releases accepted/en-route donors whose own travel-time estimate (plus a grace period) has passed
  * without an arrival. Only assignments with a KNOWN ETA qualify — an unknown ETA is never guessed.
- * The donor is marked `no_show` and the slot freed, but NO strike is recorded: the donor may simply not
- * have updated the app in a low-signal area, and a strike needs a person's judgement (D-75).
+ * The donor is marked `no_show`, the slot freed and a strike recorded (the pitch: "the no-show earns a strike").
+ * Repeated strikes only place the donor under admin review; nobody is banned automatically (D-75, D-83).
  */
 export async function releaseMissedEtaAssignments(graceMin: number, now = new Date()): Promise<AssignmentDocument[]> {
   const candidates = await AssignmentModel.find({ status: { $in: ['accepted', 'en_route'] }, isActive: true, 'eta.minutes': { $ne: null } });
@@ -393,6 +398,7 @@ export async function releaseMissedEtaAssignments(graceMin: number, now = new Da
         });
         await releaseSlot(session, doc.requestId);
         await recordAudit(auditOnRequest(SYSTEM_ACTOR, doc, 'assignment.missed_eta', { reason: doc.endReason ?? undefined }), session);
+        await recordStrike(session, { donorUserId: doc.donorUserId, requestId: doc.requestId, reason: doc.endReason ?? 'Missed the estimated arrival time' });
         return doc;
       });
       announceAssignment(a);

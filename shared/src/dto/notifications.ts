@@ -45,7 +45,7 @@ export interface RealtimeEvent {
 }
 
 /** What an inbound SMS reply did. `replyText` is what the donor is told (sent back by the provider webhook). */
-export const SMS_REPLY_OUTCOMES = ['accepted', 'declined', 'rejected', 'needs_code', 'no_open_alert', 'unrecognised', 'unknown_sender', 'availability_refreshed'] as const;
+export const SMS_REPLY_OUTCOMES = ['accepted', 'declined', 'rejected', 'needs_code', 'no_open_alert', 'unrecognised', 'unknown_sender', 'availability_refreshed', 'family_request_received', 'family_phone_confirmed'] as const;
 export type SmsReplyOutcome = (typeof SMS_REPLY_OUTCOMES)[number];
 
 export interface SmsReplyResult {

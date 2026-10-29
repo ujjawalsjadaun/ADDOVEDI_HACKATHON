@@ -36,7 +36,12 @@ const envSchema = z
     ROUTING_PROVIDER: z.enum(['simulated', 'openrouteservice']).default('simulated'),
     ORS_API_KEY: z.string().optional(),
     WEATHER_PROVIDER: z.enum(['simulated', 'open-meteo']).default('simulated'),
-    SMS_PROVIDER: z.enum(['simulated']).default('simulated'),
+    SMS_PROVIDER: z.enum(['simulated', 'twilio']).default('simulated'),
+    /** Twilio credentials: server environment only, never committed or logged. Required when SMS_PROVIDER=twilio. */
+    TWILIO_ACCOUNT_SID: z.string().min(10).optional(),
+    TWILIO_AUTH_TOKEN: z.string().min(10).optional(),
+    /** Sender: a Twilio number in E.164 format. */
+    TWILIO_FROM: z.string().regex(/^\+[1-9]\d{7,14}$/, 'use international format').optional(),
     /** Base URL of the web app, used for links in SMS (e.g. the public checker). */
     PUBLIC_APP_URL: z.url().default('http://localhost:5173'),
     /** Simulated SMS only: share of sends that fail transiently (0–1), to demonstrate retries. */
@@ -84,6 +89,11 @@ const envSchema = z
       }
       if (!env.PUBLIC_APP_URL.startsWith('https://')) {
         ctx.addIssue({ code: 'custom', path: ['PUBLIC_APP_URL'], message: 'must start with https:// in production' });
+      }
+    }
+    if (env.SMS_PROVIDER === 'twilio') {
+      for (const key of ['TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN', 'TWILIO_FROM'] as const) {
+        if (!env[key]) ctx.addIssue({ code: 'custom', path: [key], message: 'required when SMS_PROVIDER=twilio' });
       }
     }
     if (env.ROUTING_PROVIDER === 'openrouteservice' && !env.ORS_API_KEY) {

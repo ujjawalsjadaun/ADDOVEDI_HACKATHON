@@ -88,6 +88,11 @@ export function FamilyLeadPage() {
           error={fieldError(err, 'hospitalId')}
           hint="Only verified hospitals registered on Golden Hour are shown."
         />
+        {facilities.data?.find((f) => f.id === form.hospitalId) && (
+          <p className="rounded-lg bg-slate-50 p-3 text-xs text-slate-600">
+            No data? Send an SMS instead: <span className="font-mono font-bold text-slate-900">BLOOD {form.bloodGroup || 'O-'} {facilities.data.find((f) => f.id === form.hospitalId)!.smsCode} P1234</span> (blood group, hospital code, patient ID). Demonstration build: SMS is simulated.
+          </p>
+        )}
 
         <div className="grid gap-4 sm:grid-cols-2">
           <TextField

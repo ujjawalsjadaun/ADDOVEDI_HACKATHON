@@ -4,6 +4,8 @@ import type { LatLng } from '../schemas/common';
 /** Safe for anyone: verified institutions only. */
 export interface HospitalPublic {
   id: string;
+  /** What a family types after BLOOD <group> when asking by SMS, e.g. "Siang-HDH". Derived from the name. */
+  smsCode: string;
   name: string;
   facilityType: FacilityType;
   district: string;

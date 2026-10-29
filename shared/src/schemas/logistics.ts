@@ -30,6 +30,16 @@ export const verifyFamilyPhoneSchema = z.object({
 });
 export type VerifyFamilyPhoneInput = z.infer<typeof verifyFamilyPhoneSchema>;
 
+/**
+ * A local coordinator vouches that a family's request is genuine. They enter the reference the family
+ * gave them; they never see the family's name, number or the patient.
+ */
+export const vouchFamilyLeadSchema = z.object({
+  reference: z.string().trim().min(3).max(30),
+  note: z.string().trim().min(3, 'say how you know the family').max(200),
+});
+export type VouchFamilyLeadInput = z.infer<typeof vouchFamilyLeadSchema>;
+
 export const rejectFamilyLeadSchema = z.object({ reason: reasonSchema });
 
 // ── Transport tasks (docs/state-machines.md §9) ──────────────────────────────

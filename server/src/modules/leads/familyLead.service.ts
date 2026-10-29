@@ -1,4 +1,5 @@
 import { randomInt } from 'node:crypto';
+import { Types } from 'mongoose';
 import type {
   ConfirmFamilyLeadInput,
   CreateFamilyLeadInput,
@@ -7,6 +8,7 @@ import type {
   FamilyLeadView,
   RequestDetail,
   VerifyFamilyPhoneInput,
+  VouchFamilyLeadInput,
 } from '@golden-hour/shared';
 import type { Config } from '../../config/env';
 import { AppError } from '../../lib/errors';
@@ -95,6 +97,33 @@ export async function submitFamilyLead(input: CreateFamilyLeadInput, httpRequest
   throw new AppError('INTERNAL', 'Could not record the request. Please try again.');
 }
 
+/**
+ * A coordinator vouches for a pending lead by its reference. The answer is the same whether or not the
+ * reference exists, so coordinators cannot probe for leads; nothing about the family is returned.
+ * A second vouch replaces the first (the latest local knowledge wins) and every vouch is audited.
+ */
+export async function vouchForFamilyLead(input: VouchFamilyLeadInput, ctx: ActionContext): Promise<{ recorded: true }> {
+  const lead = await FamilyLeadModel.findOne({ reference: input.reference.toUpperCase(), status: 'pending', expiresAt: { $gt: new Date() } });
+  if (lead) {
+    await withTransaction(async (session) => {
+      await FamilyLeadModel.updateOne({ _id: lead._id }, { $set: { vouch: { by: new Types.ObjectId(ctx.user.id), at: new Date(), note: input.note } } }, { session });
+      await recordAudit(
+        {
+          actor: userActor(ctx.user),
+          action: 'lead.vouched',
+          resourceType: 'familyLead',
+          resourceId: lead._id,
+          facilityId: lead.hospitalId,
+          detail: { reference: lead.reference },
+          requestId: ctx.requestId,
+        },
+        session,
+      );
+    });
+  }
+  return { recorded: true };
+}
+
 const MAX_CODE_ATTEMPTS = 5;
 
 /**
@@ -118,7 +147,7 @@ export async function verifyFamilyPhone(input: VerifyFamilyPhoneInput, config: C
 
 async function toViews(leads: FamilyLeadDocument[]): Promise<FamilyLeadView[]> {
   const [deciders, requests] = await Promise.all([
-    UserModel.find({ _id: { $in: leads.map((l) => l.decidedBy).filter(Boolean) } }).select('name').lean(),
+    UserModel.find({ _id: { $in: leads.flatMap((l) => [l.decidedBy, l.vouch?.by]).filter(Boolean) } }).select('name').lean(),
     BloodRequestModel.find({ _id: { $in: leads.map((l) => l.linkedRequestId).filter(Boolean) } }).select('publicCode').lean(),
   ]);
   const name = new Map(deciders.map((u) => [u._id.toString(), u.name]));
@@ -129,6 +158,7 @@ async function toViews(leads: FamilyLeadDocument[]): Promise<FamilyLeadView[]> {
     contactName: l.contactName,
     contactPhone: l.contactPhone,
     phoneVerified: l.phoneVerified,
+    vouch: l.vouch ? { by: name.get(l.vouch.by.toString()) ?? null, at: l.vouch.at.toISOString(), note: l.vouch.note } : null,
     bloodGroup: l.bloodGroup ?? null,
     note: l.note ?? null,
     status: effectiveStatus(l),
@@ -182,13 +212,17 @@ export async function confirmFamilyLead(id: string, input: ConfirmFamilyLeadInpu
       },
       session,
     );
-    const facility = await HospitalModel.findById(lead.hospitalId).session(session).select('name');
+    const facility = await HospitalModel.findById(lead.hospitalId).session(session).select('name ambulanceAccessPoint');
+    const point = facility?.ambulanceAccessPoint;
+    const ambulancePointText = point
+      ? `${point.note ? `${point.note} ` : ''}https://www.openstreetmap.org/?mlat=${point.location.coordinates[1]}&mlon=${point.location.coordinates[0]}#map=16/${point.location.coordinates[1]}/${point.location.coordinates[0]}`
+      : undefined;
     await enqueueNotification(session, {
       eventId: `lead:${lead._id.toString()}:confirmed`,
       type: 'family_lead_update',
       recipientLeadId: lead._id,
       requestId: created._id,
-      vars: { event: 'confirmed', facilityName: facility?.name ?? 'The hospital', publicCode: created.publicCode, checkUrl: `${config.PUBLIC_APP_URL}/check/${created.publicCode}` },
+      vars: { event: 'confirmed', facilityName: facility?.name ?? 'The hospital', publicCode: created.publicCode, checkUrl: `${config.PUBLIC_APP_URL}/check/${created.publicCode}`, ambulancePointText },
     });
   });
   return getRequestDetail(request._id.toString(), ctx.user, config);

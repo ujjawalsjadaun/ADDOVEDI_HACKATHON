@@ -236,7 +236,7 @@ Validated with Zod at startup in `server/src/config/env.ts`. Server refuses to s
 | `ROUTING_PROVIDER` | no | `simulated` | `simulated` \| `openrouteservice` |
 | `ORS_API_KEY` | if ORS | — | Routing key (secret) |
 | `WEATHER_PROVIDER` | no | `simulated` | `simulated` \| `open-meteo` |
-| `SMS_PROVIDER` | no | `simulated` | `simulated` only in MVP |
+| `SMS_PROVIDER` | no | `simulated` | `simulated` or `twilio`. Twilio needs `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM` (E.164); startup fails without them |
 | `PUBLIC_APP_URL` | no | `http://localhost:5173` | Base URL used for links inside SMS |
 | `SIMULATED_SMS_FAILURE_RATE` | no | `0` | Share (0–1) of simulated sends that fail transiently, to demonstrate retries |
 | `PLANNED_ESCALATION_FACTOR` | no | `3` | Multiplier (1–10) on escalation step times for planned (standard-urgency) requests |
