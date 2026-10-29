@@ -24,7 +24,10 @@ import { roadReportRoutes } from './modules/roads/roadReport.routes';
 import { geoRoutes } from './modules/geo/geo.routes';
 import { familyLeadRoutes } from './modules/leads/familyLead.routes';
 import { transportRoutes } from './modules/transport/transportTask.routes';
+import { twilioWebhookRoutes } from './modules/alerts/twilioWebhook.routes';
+import { relayRoutes } from './modules/alerts/relay.routes';
 import { inboundSmsRoutes } from './modules/alerts/smsReply.routes';
+import { surplusRoutes } from './modules/transfers/surplus.routes';
 import { stockTransferRoutes } from './modules/transfers/stockTransfer.routes';
 
 export interface AppDeps {
@@ -84,6 +87,8 @@ export function createApp({ config, logger }: AppDeps) {
     res.setHeader('Cache-Control', 'no-store');
     next();
   });
+  // Twilio webhooks send forms and authenticate by signature, so they sit before the JSON-only guard.
+  api.use('/twilio', twilioWebhookRoutes(config));
   api.use(requireJson);
   api.use(express.json({ limit: '50kb' }));
   // Health stays outside authentication so it works even when the database is down.
@@ -98,6 +103,7 @@ export function createApp({ config, logger }: AppDeps) {
   api.use('/donors', donorRoutes(config));
   api.use('/alerts', alertRoutes(config));
   api.use('/sms', inboundSmsRoutes(config));
+  api.use('/relay', relayRoutes());
   api.use('/assignments', assignmentRoutes(config, logger));
   api.use('/dashboard', dashboardRoutes());
   api.use('/road-reports', roadReportRoutes());
@@ -105,6 +111,7 @@ export function createApp({ config, logger }: AppDeps) {
   api.use('/family-leads', familyLeadRoutes(config));
   api.use('/transport-tasks', transportRoutes());
   api.use('/stock-transfers', stockTransferRoutes());
+  api.use('/stock-surplus', surplusRoutes());
   api.use(notFound);
 
   app.use('/api', api);

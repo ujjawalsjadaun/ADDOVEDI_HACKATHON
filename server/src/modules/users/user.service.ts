@@ -65,6 +65,7 @@ export async function createUser(
             role: input.role,
             facilityId: input.facilityId ?? null,
             canVerifyRequests: input.canVerifyRequests,
+            villageLabel: input.role === 'coordinator' ? (input.villageLabel ?? null) : null,
           },
         ],
         { session },

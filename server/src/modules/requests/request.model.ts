@@ -5,6 +5,7 @@ import {
   DUPLICATE_REVIEW_STATUSES,
   REQUEST_STATUSES,
   REQUEST_VERIFICATION_STATUSES,
+  REQUEST_CATEGORIES,
   URGENCY_LEVELS,
 } from '@golden-hour/shared';
 
@@ -41,6 +42,7 @@ const bloodRequestSchema = new Schema(
     slotsFilled: { type: Number, default: 0, min: 0 },
     urgencySuggested: { type: String, enum: URGENCY_LEVELS, required: true },
     urgencyConfirmed: { type: String, enum: URGENCY_LEVELS, default: null },
+    category: { type: String, enum: [...REQUEST_CATEGORIES, null], default: null },
     deadlineAt: { type: Date, required: true },
     /** HMAC(PATIENT_REF_SECRET, facilityId:normalisedRef). The raw reference is never stored. */
     patientRefHash: { type: String, required: true },

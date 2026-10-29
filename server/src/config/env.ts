@@ -40,6 +40,8 @@ const envSchema = z
     /** Twilio credentials: server environment only, never committed or logged. Required when SMS_PROVIDER=twilio. */
     TWILIO_ACCOUNT_SID: z.string().min(10).optional(),
     TWILIO_AUTH_TOKEN: z.string().min(10).optional(),
+    /** Public base URL Twilio calls (no trailing slash). Defaults to PUBLIC_APP_URL; set it if a proxy changes the host. */
+    TWILIO_WEBHOOK_BASE_URL: z.url().optional(),
     /** Sender: a Twilio number in E.164 format. */
     TWILIO_FROM: z.string().regex(/^\+[1-9]\d{7,14}$/, 'use international format').optional(),
     /** Base URL of the web app, used for links in SMS (e.g. the public checker). */

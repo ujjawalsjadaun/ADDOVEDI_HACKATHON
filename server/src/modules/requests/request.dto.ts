@@ -70,6 +70,7 @@ export function toRequestDetail(
     facility: toFacilitySummary(extra.facility),
     clinicalNote: doc.clinicalNote ?? null,
     urgencySuggested: doc.urgencySuggested,
+    category: doc.category ?? null,
     createdBy: { id: doc.createdBy.toString(), name: name(doc.createdBy) },
     verification: doc.verification
       ? { by: name(doc.verification.by), at: doc.verification.at.toISOString(), reason: doc.verification.reason ?? null }

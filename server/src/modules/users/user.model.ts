@@ -7,6 +7,8 @@ const userSchema = new Schema(
     passwordHash: { type: String, required: true, select: false },
     name: { type: String, required: true, trim: true },
     phone: { type: String },
+    /** Coordinators: the village they relay alerts for (matched to a donor's anchor label). */
+    villageLabel: { type: String, default: null },
     role: { type: String, enum: USER_ROLES, required: true },
     facilityId: { type: Schema.Types.ObjectId, ref: 'Hospital', default: null },
     canVerifyRequests: { type: Boolean, default: false },

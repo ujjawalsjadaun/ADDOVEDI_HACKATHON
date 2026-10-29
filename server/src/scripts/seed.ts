@@ -98,9 +98,14 @@ for (const s of STAFF) {
   created.push(`user ${s.email} (hospital staff${s.verifier ? ', verifier' : ''})`);
 }
 if (!(await UserModel.exists({ email: 'coord@demo.test' }))) {
-  await UserModel.create({ email: 'coord@demo.test', name: 'Chimi Coordinator', passwordHash, role: 'coordinator', phone: '+919000000301' });
-  created.push('user coord@demo.test (coordinator)');
-} else skipped.push('user coord@demo.test');
+  await UserModel.create({ email: 'coord@demo.test', name: 'Chimi Coordinator', passwordHash, role: 'coordinator', phone: '+919000000301', villageLabel: 'Mebo village' });
+  created.push('user coord@demo.test (coordinator, serves Mebo village)');
+} else {
+  // Earlier seeds had no village; give the demo coordinator one so the village-relay screen has donors to show.
+  const set = await UserModel.updateOne({ email: 'coord@demo.test', villageLabel: null }, { $set: { villageLabel: 'Mebo village' } });
+  if (set.modifiedCount) created.push('coord@demo.test now serves Mebo village');
+  else skipped.push('user coord@demo.test');
+}
 
 // ── donors (varied on purpose: some are NOT alertable) ───────────────────────
 

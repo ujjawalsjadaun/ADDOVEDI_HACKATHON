@@ -55,7 +55,7 @@ async function toViews(tasks: TransportTaskDocument[], viewer: AuthUser): Promis
   const siblings = await relaySiblings(tasks);
   const [requests, facilities, assignments] = await Promise.all([
     BloodRequestModel.find({ _id: { $in: tasks.map((t) => t.requestId) } }),
-    HospitalModel.find({ _id: { $in: tasks.map((t) => t.facilityId) } }).select('name district'),
+    HospitalModel.find({ _id: { $in: tasks.map((t) => t.facilityId) } }).select('name district ambulanceAccessPoint'),
     AssignmentModel.find({ _id: { $in: tasks.map((t) => t.assignmentId ?? t.relayAssignmentId).filter(Boolean) } }).select('donorUserId'),
   ]);
   const userIds = [
@@ -84,6 +84,7 @@ async function toViews(tasks: TransportTaskDocument[], viewer: AuthUser): Promis
         status: t.status,
         request: { id: r._id.toString(), publicCode: r.publicCode, bloodGroup: r.bloodGroup, requestStatus: r.requestStatus, deadlineAt: r.deadlineAt.toISOString() },
         facility: { id: f._id.toString(), name: f.name, district: f.district },
+        ambulancePoint: f.ambulanceAccessPoint ? { note: f.ambulanceAccessPoint.note ?? null, location: fromGeoPoint(f.ambulanceAccessPoint.location) } : null,
         pickup: { label: t.pickup.label, location: t.pickup.location ? fromGeoPoint(t.pickup.location) : null },
         dropoff: { label: t.dropoff.label, location: t.dropoff.location ? fromGeoPoint(t.dropoff.location) : null },
         donor: donor ? { name: donor.name, phone: donor.phone ?? null } : null,

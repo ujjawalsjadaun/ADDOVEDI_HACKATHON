@@ -34,6 +34,9 @@ const requestAlertSchema = new Schema(
     responseToken: { type: String, required: true },
     /** Short code the donor types after YES/NO in an SMS reply (e.g. "YES K7P2"). Absent on alerts made before SMS replies. */
     shortCode: { type: String },
+    /** A village coordinator told the donor in person or by phone (the donor still answers for themselves). */
+    relayedAt: { type: Date, default: null },
+    relayedBy: { type: Schema.Types.ObjectId, ref: 'User', default: null },
   },
   { timestamps: true },
 );
