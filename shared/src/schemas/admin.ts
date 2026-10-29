@@ -51,6 +51,8 @@ export const createUserSchema = z
     phone: phoneSchema.optional(),
     facilityId: objectIdSchema.optional(),
     canVerifyRequests: z.boolean().default(false),
+    /** Coordinators only: the village they serve. Donors who chose the same village label get their alerts relayed by this person. */
+    villageLabel: z.string().trim().min(2).max(80).optional(),
   })
   .superRefine((u, ctx) => {
     if (u.role === 'hospital_staff' && !u.facilityId) {

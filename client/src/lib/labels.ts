@@ -1,4 +1,4 @@
-import type { AlertResponse, AssignmentStatus, ClosureReason, RequestStatus, RequestSummary, Urgency } from '@golden-hour/shared';
+import type { AlertResponse, AssignmentStatus, ClosureReason, RequestCategory, RequestStatus, RequestSummary, Urgency } from '@golden-hour/shared';
 import type { BadgeTone } from '../components/ui/StatusBadge';
 
 // Human labels for status values, shared by every area so the same state reads the same everywhere.
@@ -7,6 +7,14 @@ export const URGENCY_LABEL: Record<Urgency, string> = {
   critical: 'Critical',
   urgent: 'Urgent',
   standard: 'Planned',
+};
+
+export const CATEGORY_LABEL: Record<RequestCategory, string> = {
+  trauma: 'Trauma / accident',
+  delivery: 'Delivery / childbirth',
+  surgery: 'Surgery',
+  planned_transfusion: 'Planned transfusion',
+  other: 'Other',
 };
 
 export const URGENCY_TONE: Record<Urgency, BadgeTone> = {

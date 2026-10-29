@@ -101,6 +101,7 @@ function UserRow({ user }: { user: UserAdmin }) {
                 <span>{user.facilityName}</span>
               </>
             )}
+            {user.villageLabel && <span className="rounded bg-slate-100 px-2 py-0.5 text-2xs font-semibold text-slate-700">Village: {user.villageLabel}</span>}
             {user.canVerifyRequests && (
               <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-2xs font-semibold text-emerald-700 border border-emerald-200">
                 Verifier
@@ -157,6 +158,7 @@ function CreateUserForm({ onDone }: { onDone: () => void }) {
     role: 'hospital_staff' as (typeof PROVISIONABLE_ROLES)[number],
     facilityId: '',
     canVerifyRequests: false,
+    villageLabel: '',
   });
   const isStaff = form.role === 'hospital_staff';
 
@@ -171,6 +173,7 @@ function CreateUserForm({ onDone }: { onDone: () => void }) {
         role: form.role,
         facilityId: isStaff ? form.facilityId || undefined : undefined,
         canVerifyRequests: isStaff && form.canVerifyRequests,
+        villageLabel: form.role === 'coordinator' ? form.villageLabel || undefined : undefined,
       },
       { onSuccess: onDone },
     );
@@ -232,6 +235,15 @@ function CreateUserForm({ onDone }: { onDone: () => void }) {
             onChange={(e) => setForm({ ...form, facilityId: e.target.value })}
             options={facilityOptions}
             error={fieldError(err, 'facilityId')}
+          />
+        )}
+        {form.role === 'coordinator' && (
+          <TextField
+            label="Village served (optional)"
+            value={form.villageLabel}
+            onChange={(e) => setForm({ ...form, villageLabel: e.target.value })}
+            error={fieldError(err, 'villageLabel')}
+            hint="Donors who picked this exact village name get their alerts relayed by this coordinator."
           />
         )}
       </div>

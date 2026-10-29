@@ -122,3 +122,14 @@ export type StockTransferActionInput = z.infer<typeof stockTransferActionSchema>
 export const listStockTransfersQuerySchema = z.object({
   direction: z.enum(['incoming', 'outgoing']).default('outgoing'),
 });
+
+// ── Surplus units shared with nearby facilities ──────────────────────────────
+
+export const createSurplusSchema = z.object({
+  bloodGroup: z.enum(BLOOD_GROUPS),
+  units: z.number().int().min(1).max(50),
+  note: z.string().trim().max(160).optional(),
+  /** How long the offer stays visible. Units near expiry should be offered with a short window. */
+  validHours: z.number().int().min(6).max(168).default(48),
+});
+export type CreateSurplusInput = z.infer<typeof createSurplusSchema>;

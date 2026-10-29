@@ -300,3 +300,28 @@ Reply grammar: `YES|Y|NO|N` plus an optional 4-character code from the alert SMS
 - A bare 6-digit code from the lead's number → number confirmed (`family_phone_confirmed`), with the same 5-attempt limit as the web page.
 
 Status texts to a confirmed family number (`family_lead_update`): `confirmed` (with the facility's nearest ambulance point, if set), `alerted` (n donors), `donor_accepted` (k of n units), `donor_en_route`, `donor_arrived`, `closed`, `rejected`. They carry no patient, donor or blood-group detail.
+
+### Surplus units (pitch slide 13: "surplus units become visible to others")
+| Method & path | Role | Notes |
+| --- | --- | --- |
+| `GET /stock-surplus` | HOS | Open, unexpired offers from verified facilities (own marked `own: true`) |
+| `POST /stock-surplus` | HOS | `{ bloodGroup, units, note?, validHours (6–168, default 48) }`; verified facilities only; max 8 open offers per facility; audited `surplus.offered` |
+| `POST /stock-surplus/:id/withdraw` | HOS | Own facility only; audited `surplus.withdrawn` |
+
+An offer is information only. Asking for units uses the normal `POST /stock-transfers`, which the offering facility answers.
+
+`TransportTaskView.ambulancePoint` carries the facility's nearest ambulance point so the coordinator/driver sees it on the task.
+
+### Village relay (pitch slides 7, 11, 13: "village anchors relay alerts")
+| Method & path | Role | Notes |
+| --- | --- | --- |
+| `GET /relay/alerts` | COO | Open (pending, unexpired) alerts of donors whose anchor label equals the coordinator's `villageLabel` (case-insensitive), who consented to contact and are not under review. Includes donor name and phone, because the coordinator is a named, accountable relay |
+| `POST /relay/alerts/:id/relayed` | COO | Marks "I told the donor" (`relayedAt`, `relayedBy`); audited `alert.relayed`. Does **not** answer for the donor |
+
+Admins set a coordinator's village when creating the account (`villageLabel`).
+
+### Twilio webhooks (live-phone demo, pitch slide 19)
+Point a Twilio number's *messaging* webhook at `POST {PUBLIC_APP_URL}/api/twilio/sms` and its *voice* webhook at `POST {PUBLIC_APP_URL}/api/twilio/voice`. Both are form-encoded, authenticated by `X-Twilio-Signature` (HMAC-SHA1 with `TWILIO_AUTH_TOKEN`) and answer 404 for a bad signature or when `SMS_PROVIDER` is not `twilio`.
+- `/sms`: an incoming text goes through the same handler as the JSON webhook (donor YES/NO, `BLOOD …` family request, 6-digit code); `replyText` is returned as TwiML.
+- `/voice`: the call is rejected (free for the caller) and counts as a missed call = "available today".
+Sent messages still show `sent` (Twilio accepted), never `delivered`: delivery receipts are not wired.

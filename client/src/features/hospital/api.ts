@@ -3,6 +3,8 @@ import type {
   CreateRequestInput,
   CreateRequestResult,
   CreateStockTransferInput,
+  CreateSurplusInput,
+  SurplusOfferView,
   FamilyLeadStatus,
   FamilyLeadView,
   HospitalDashboard,
@@ -130,5 +132,29 @@ export function useVerifiedFacilities() {
     queryKey: ['hospitals', 'public'],
     queryFn: async () => (await api<HospitalPublic[]>('/hospitals')).data,
     staleTime: 5 * 60_000,
+  });
+}
+
+export function useSurplus() {
+  return useQuery({
+    queryKey: ['surplus'],
+    queryFn: async () => (await api<SurplusOfferView[]>('/stock-surplus')).data,
+    refetchInterval: 60_000,
+  });
+}
+
+export function useCreateSurplus() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: CreateSurplusInput) => (await api<SurplusOfferView>('/stock-surplus', { method: 'POST', body: input })).data,
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ['surplus'] }),
+  });
+}
+
+export function useWithdrawSurplus() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => (await api<{ withdrawn: true }>(`/stock-surplus/${id}/withdraw`, { method: 'POST', body: {} })).data,
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ['surplus'] }),
   });
 }

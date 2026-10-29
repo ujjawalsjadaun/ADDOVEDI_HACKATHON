@@ -70,6 +70,16 @@ export function TransportTaskCard({ task: t, showRequest = true }: { task: Trans
         )}
       </div>
 
+      {t.ambulancePoint && (
+        <p className="rounded-lg bg-slate-50 p-2 text-xs text-slate-700">
+          <strong>Nearest ambulance point for {t.facility.name}:</strong> {t.ambulancePoint.note ?? 'marked on the map'}
+          {mapLink(t.ambulancePoint.location) && (
+            <a className="ml-1.5 font-semibold text-brand-700 hover:underline" href={mapLink(t.ambulancePoint.location)!} target="_blank" rel="noreferrer">
+              Open map
+            </a>
+          )}
+        </p>
+      )}
       {t.relay?.leg === 2 && !['handed_over', 'completed'].includes(t.relay.otherLegStatus ?? '') && ['requested', 'assigned'].includes(t.status) && (
         <p className="rounded-lg bg-amber-50 p-2 text-xs font-medium text-amber-900">Waiting for the first leg to reach the handover point before this leg can start.</p>
       )}

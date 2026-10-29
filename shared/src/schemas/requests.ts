@@ -8,6 +8,10 @@ export const MAX_DEADLINE_HOURS = 72;
 
 const expectedVersion = z.number().int().min(0);
 
+/** Why the blood is needed. Trauma and delivery are emergencies by nature; a planned transfusion is not. */
+export const REQUEST_CATEGORIES = ['trauma', 'delivery', 'surgery', 'planned_transfusion', 'other'] as const;
+export type RequestCategory = (typeof REQUEST_CATEGORIES)[number];
+
 export const createRequestSchema = z.object({
   bloodGroup: z.enum(BLOOD_GROUPS),
   acceptCompatibleGroups: z.boolean().default(false),
@@ -15,6 +19,7 @@ export const createRequestSchema = z.object({
   deadlineAt: z.iso.datetime({ offset: true, message: 'enter a valid date and time' }),
   /** Hospital's internal patient reference (e.g. MRN). Hashed on receipt; never stored or returned. */
   patientRef: z.string().trim().min(1, 'This field is required.').max(64),
+  category: z.enum(REQUEST_CATEGORIES).optional(),
   patientLabel: z.string().trim().max(60).optional(),
   clinicalNote: z.string().trim().max(280).optional(),
 });
@@ -89,7 +94,15 @@ export type DonorAlertReportInput = z.infer<typeof donorAlertReportSchema>;
 // ── Urgency suggestion (rule-based, never applied without hospital confirmation) ──
 
 /** docs/security.md §9: critical < 2 h to deadline, urgent < 6 h, otherwise standard. */
-export function suggestUrgency(deadlineAt: Date, now: Date = new Date()): Urgency {
+export function suggestUrgency(deadlineAt: Date, now: Date = new Date(), category?: RequestCategory): Urgency {
+  // Trauma and delivery (postpartum haemorrhage) are critical whatever the deadline says.
+  if (category === 'trauma' || category === 'delivery') return 'critical';
+  const byDeadline = suggestByDeadline(deadlineAt, now);
+  // A planned transfusion is never suggested above "urgent": the hospital can still confirm higher.
+  return category === 'planned_transfusion' && byDeadline === 'critical' ? 'urgent' : byDeadline;
+}
+
+function suggestByDeadline(deadlineAt: Date, now: Date): Urgency {
   const hours = (deadlineAt.getTime() - now.getTime()) / 3_600_000;
   if (hours < 2) return 'critical';
   if (hours < 6) return 'urgent';

@@ -8,6 +8,7 @@ import type {
   RequestVerificationStatus,
   Urgency,
 } from '../enums';
+import type { RequestCategory } from '../schemas/requests';
 import type { FacilitySummary } from './auth';
 import type { AlertSummary, AssignmentForHospital } from './donor';
 
@@ -70,6 +71,7 @@ export interface RequestDetail extends RequestSummary {
   facility: FacilitySummary;
   clinicalNote: string | null;
   urgencySuggested: Urgency;
+  category: RequestCategory | null;
   createdBy: { id: string; name: string | null };
   verification: { by: string | null; at: string; reason: string | null } | null;
   duplicateReview: {

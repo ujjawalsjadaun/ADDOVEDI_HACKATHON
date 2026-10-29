@@ -12,7 +12,7 @@ import { CandidatesPanel } from './components/CandidatesPanel';
 import { TransportPanel } from '../transport/TransportPanel';
 import { RequestActions } from './components/RequestActions';
 import { Timeline } from './components/Timeline';
-import { requestState, URGENCY_LABEL, URGENCY_TONE } from '../../lib/labels';
+import { CATEGORY_LABEL, requestState, URGENCY_LABEL, URGENCY_TONE } from '../../lib/labels';
 
 /** Shared by the hospital area and the admin area (`basePath` decides where links go). */
 export function RequestDetailPage({ basePath = '/hospital/requests' }: { basePath?: string }) {
@@ -127,9 +127,10 @@ export function RequestDetailPage({ basePath = '/hospital/requests' }: { basePat
           </div>
         </div>
 
-        {(r.patientLabel || r.verification || r.closure) && (
+        {(r.patientLabel || r.category || r.verification || r.closure) && (
           <dl className="grid gap-x-6 gap-y-2 border-t border-slate-100 pt-3 text-xs sm:grid-cols-3">
             {r.patientLabel && <Item label="Staff Label">{r.patientLabel}</Item>}
+            {r.category && <Item label="Reason">{CATEGORY_LABEL[r.category]}</Item>}
             {r.verification && (
               <Item label={r.verificationStatus === 'rejected' ? 'Rejected' : 'Verified'}>
                 {formatDateTime(r.verification.at)} by {r.verification.by ?? 'staff'}

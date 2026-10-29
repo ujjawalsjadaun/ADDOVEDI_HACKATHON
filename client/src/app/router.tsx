@@ -19,6 +19,7 @@ import { DonorPage } from '../features/donor/DonorPage';
 import { DonorHomePage } from '../features/donor/DonorHomePage';
 import { DonorProfilePage } from '../features/donor/DonorProfilePage';
 import { CoordinatorPage } from '../features/coordinator/CoordinatorPage';
+import { RelayPage } from '../features/coordinator/RelayPage';
 import { VouchPage } from '../features/coordinator/VouchPage';
 import { CoordinatorRequestsPage } from '../features/coordinator/CoordinatorRequestsPage';
 import { AdminPage } from '../features/admin/AdminPage';
@@ -86,6 +87,7 @@ export const routes: RouteObject[] = [
         children: [
           { index: true, element: <CoordinatorRequestsPage /> },
           { path: 'transport', element: <CoordinatorTransportPage /> },
+          { path: 'relay', element: <RelayPage /> },
           { path: 'vouch', element: <VouchPage /> },
           { path: 'map', lazy: loadRoadMap },
           { path: '*', element: <NotFoundPage /> },

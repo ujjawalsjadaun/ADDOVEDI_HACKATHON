@@ -45,6 +45,8 @@ export interface TransportTaskView {
   status: TransportStatus;
   request: { id: string; publicCode: string; bloodGroup: BloodGroup; requestStatus: RequestStatus; deadlineAt: string };
   facility: { id: string; name: string; district: string };
+  /** Nearest point an ambulance can reach for this facility, if marked (a reported estimate, not a survey). */
+  ambulancePoint: { note: string | null; location: LatLng } | null;
   pickup: { label: string; location: LatLng | null };
   dropoff: { label: string; location: LatLng | null };
   /** Donor details for a pickup — only for the assignee and the facility's staff. */
@@ -73,4 +75,35 @@ export interface StockTransferView {
   createdAt: string;
   version: number;
   allowedActions: StockTransferAction[];
+}
+
+/** Spare units a verified facility is willing to share. Visible to other verified facilities' staff only. */
+export interface SurplusOfferView {
+  id: string;
+  facility: { id: string; name: string; district: string };
+  bloodGroup: BloodGroup;
+  units: number;
+  note: string | null;
+  availableUntil: string;
+  /** True for the viewer's own facility (they can withdraw it). */
+  own: boolean;
+  createdAt: string;
+}
+
+/**
+ * An open donor alert in a coordinator's village, for relaying it to a donor who has no data.
+ * Only donors who consented to contact and chose this village appear; only while the alert is still open.
+ */
+export interface RelayAlertView {
+  alertId: string;
+  donor: { name: string; phone: string | null };
+  bloodGroup: BloodGroup;
+  facility: { name: string; district: string };
+  publicCode: string;
+  deadlineAt: string;
+  expiresAt: string;
+  /** The code the donor can SMS back, e.g. "YES K7P2". */
+  shortCode: string | null;
+  relayedAt: string | null;
+  relayedBy: string | null;
 }

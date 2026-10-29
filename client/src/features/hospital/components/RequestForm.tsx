@@ -1,9 +1,9 @@
 import { useState, type FormEvent, type ReactNode } from 'react';
-import { BLOOD_GROUPS, MAX_UNITS_PER_REQUEST, suggestUrgency, type BloodGroup, type CreateRequestInput } from '@golden-hour/shared';
+import { BLOOD_GROUPS, MAX_UNITS_PER_REQUEST, REQUEST_CATEGORIES, suggestUrgency, type BloodGroup, type CreateRequestInput, type RequestCategory } from '@golden-hour/shared';
 import { CheckboxField, fieldError, FormError, SelectField, TextAreaField, TextField } from '../../../components/ui/form';
 import { StatusBadge } from '../../../components/ui/StatusBadge';
 import { toDateTimeLocalValue } from '../../../lib/format';
-import { URGENCY_LABEL, URGENCY_TONE } from '../../../lib/labels';
+import { CATEGORY_LABEL, URGENCY_LABEL, URGENCY_TONE } from '../../../lib/labels';
 
 interface RequestFormProps {
   initialBloodGroup?: BloodGroup | null;
@@ -26,6 +26,7 @@ export function RequestForm({ initialBloodGroup, pending, error: err, submitLabe
     unitsRequested: '1',
     deadline: toDateTimeLocalValue(new Date(Date.now() + 4 * 3_600_000)),
     patientRef: '',
+    category: '' as RequestCategory | '',
     patientLabel: '',
     clinicalNote: '',
   });
@@ -36,7 +37,7 @@ export function RequestForm({ initialBloodGroup, pending, error: err, submitLabe
   }
 
   const deadlineDate = new Date(form.deadline);
-  const suggested = Number.isNaN(deadlineDate.getTime()) ? null : suggestUrgency(deadlineDate);
+  const suggested = Number.isNaN(deadlineDate.getTime()) ? null : suggestUrgency(deadlineDate, new Date(), form.category || undefined);
 
   function submit(e: FormEvent) {
     e.preventDefault();
@@ -46,6 +47,7 @@ export function RequestForm({ initialBloodGroup, pending, error: err, submitLabe
       unitsRequested: Number(form.unitsRequested),
       deadlineAt: Number.isNaN(deadlineDate.getTime()) ? form.deadline : deadlineDate.toISOString(),
       patientRef: form.patientRef,
+      category: form.category || undefined,
       patientLabel: form.patientLabel || undefined,
       clinicalNote: form.clinicalNote || undefined,
     });
@@ -76,6 +78,14 @@ export function RequestForm({ initialBloodGroup, pending, error: err, submitLabe
             options={Array.from({ length: MAX_UNITS_PER_REQUEST }, (_, i) => ({ value: String(i + 1), label: String(i + 1) }))}
             error={fe('unitsRequested')}
             hint="One donor gives one unit."
+          />
+          <SelectField
+            label="Reason for blood"
+            value={form.category}
+            onChange={(e) => update('category', e.target.value as RequestCategory | '')}
+            options={[{ value: '', label: 'Not specified' }, ...REQUEST_CATEGORIES.map((c) => ({ value: c, label: CATEGORY_LABEL[c] }))]}
+            error={fe('category')}
+            hint="Trauma and delivery are suggested as critical; a planned transfusion is not."
           />
           <TextField label="Needed by" type="datetime-local" required value={form.deadline} onChange={(e) => update('deadline', e.target.value)} error={fe('deadlineAt')} />
           <div className="rounded-xl border border-slate-200/80 bg-slate-50/60 p-3">

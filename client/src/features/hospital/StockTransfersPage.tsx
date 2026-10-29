@@ -7,6 +7,7 @@ import { StatusBadge, type BadgeTone } from '../../components/ui/StatusBadge';
 import { formatDateTime } from '../../lib/format';
 import { newIdempotencyKey } from '../../lib/idempotency';
 import { useMe } from '../auth/api';
+import { SurplusPanel } from './SurplusPanel';
 import { useCreateStockTransfer, useRequests, useStockTransferAction, useStockTransfers, useVerifiedFacilities } from './api';
 
 const STATUS_TONE: Record<StockTransferView['status'], BadgeTone> = {
@@ -50,6 +51,7 @@ export function StockTransfersPage() {
         </button>
       </div>
       {creating && <CreateTransferForm onDone={() => setCreating(false)} />}
+      <SurplusPanel />
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div role="group" aria-label="Direction" className="inline-flex rounded-xl bg-slate-100 p-1 border border-slate-200/80">
           {(['outgoing', 'incoming'] as const).map((d) => (
