@@ -73,6 +73,10 @@ export const userStatusSchema = z.object({
 });
 export type UserStatusInput = z.infer<typeof userStatusSchema>;
 
+/** A strike against a local coordinator (e.g. a false vouch or a false road report). At the limit the account is paused. */
+export const userStrikeSchema = z.object({ reason: reasonSchema });
+export type UserStrikeInput = z.infer<typeof userStrikeSchema>;
+
 export const listUsersQuerySchema = paginationQuerySchema.extend({
   role: z.enum(USER_ROLES).optional(),
   status: z.enum(USER_STATUSES).optional(),

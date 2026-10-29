@@ -85,7 +85,19 @@ npm run seed -w server
 
 Creates (only what is missing, so it is safe to re-run) a fictional "Siang Hills" district: two verified facilities and one pending one, an admin, hospital staff and verifiers, a coordinator, seven donors (alertable, never-donated, resting after a recent donation, last-donation-unknown, and one awaiting verification) and one pending sample request. Every account uses the password printed at the end (`DemoPass#2026!`); sign in as `admin@demo.test`, `staff.a@demo.test`, `verifier.a@demo.test`, `verifier.b@demo.test`, `coord@demo.test` or `donor1@demo.test`…`donor7@demo.test`.
 
-Demo flow: sign in as `verifier.a@demo.test` and verify the sample request (it was raised by `staff.a`, so a different verifier is allowed) → `donor1`…`donor3` get alerts → sign in as a donor and accept → follow progress as the hospital. The command **refuses to run when `NODE_ENV=production`**, and nothing in it is real data — never reuse that password anywhere real.
+Verification report (flows actually run): [docs/verification-report.md](docs/verification-report.md). Complete feature tour: [WALKTHROUGH.md](WALKTHROUGH.md). Pitch claims versus what is built: [docs/pitch-vs-reality.md](docs/pitch-vs-reality.md). Full click-by-click script: [DEMO.md](DEMO.md). Short version: sign in as `verifier.a@demo.test` and verify the sample request (it was raised by `staff.a`, so a different verifier is allowed) → `donor1`…`donor3` get alerts → sign in as a donor and accept → follow progress as the hospital. The command **refuses to run when `NODE_ENV=production`**, and nothing in it is real data — never reuse that password anywhere real.
+
+### Import a real hospital directory (optional)
+
+The pitch lists public datasets (data.gov.in *Hospital Directory* and *All India Health Centres Directory*). Download the CSV yourself, then:
+
+```bash
+npm run import:directory -w server -- path/to/directory.csv --dry-run     # preview
+npm run import:directory -w server -- path/to/directory.csv               # Arunachal Pradesh by default
+npm run import:directory -w server -- path/to/directory.csv --state "Assam"
+```
+
+Facilities are imported as **pending**: an administrator still verifies each one (Admin → Facilities). Rows without usable coordinates are skipped, and rows without a usable phone get the placeholder `+910000000000`, which is listed so the number can be corrected before verifying. The command needs columns for name, district, latitude and longitude (common header spellings are recognised). It is safe to re-run. Donors and patients are never imported: that data is not public, so use the seed command's fictional donors for demos.
 
 ### Create the first administrator (without demo data)
 

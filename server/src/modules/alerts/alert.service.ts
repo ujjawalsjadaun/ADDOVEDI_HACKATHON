@@ -11,7 +11,7 @@ import { recordAudit, type AuditActor } from '../audit/audit.service';
 import type { AuthUser } from '../auth/auth.types';
 import { DonorProfileModel } from '../donors/donor.model';
 import { HospitalModel, type HospitalDocument } from '../hospitals/hospital.model';
-import { matchDonors, type MatchResult, type RankedCandidate } from '../matching/matching.service';
+import { alertableNow, matchDonors, type MatchResult, type RankedCandidate } from '../matching/matching.service';
 import { BloodRequestModel, type BloodRequestDocument } from '../requests/request.model';
 import { applyTransition } from '../requests/request.transitions';
 import { enqueueNotification, smsCountsForRequest } from '../notifications/outbox.service';
@@ -149,7 +149,7 @@ export async function alertNextBatch(
     });
     const alertedDonorIds = await insertAlertBatch(session, {
       request: updated,
-      candidates: match.ranked,
+      candidates: alertableNow(match),
       batch,
       actor: opts.actor,
       requestId: opts.httpRequestId,

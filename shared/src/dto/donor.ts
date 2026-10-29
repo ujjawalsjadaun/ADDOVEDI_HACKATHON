@@ -32,7 +32,7 @@ export interface DonorProfileView {
   hasAnchor: boolean;
   /** The donor's own stored (rounded, ~1 km) location. Returned only to the donor themself. */
   anchor: { lat: number; lng: number; label: string } | null;
-  consent: { contact: boolean; location: boolean; at: string; version: string };
+  consent: { contact: boolean; location: boolean; /** A village coordinator may see my name and number to pass an alert on. */ relay: boolean; at: string; version: string };
   verificationStatus: DonorVerificationStatus;
   reviewStatus: DonorReviewStatus;
   strikesLast180Days: number;
@@ -130,6 +130,8 @@ export interface Reachability {
 
 export interface CandidatePreview {
   reachability: Reachability;
+  /** Eligible donors estimated to arrive after the deadline; held back until the search widens. */
+  heldForDeadline: number;
   /** Would be alerted automatically, in order. */
   ranked: Candidate[];
   /** Otherwise eligible but last donation date unknown — hospital decides, never auto-alerted. */

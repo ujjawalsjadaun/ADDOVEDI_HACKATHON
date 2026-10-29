@@ -22,6 +22,8 @@ const donorProfileSchema = new Schema(
         {
           contact: { type: Boolean, required: true },
           location: { type: Boolean, required: true },
+          /** Opt-in: a village coordinator may see my name and number before I accept, to pass an alert on by voice. */
+          relay: { type: Boolean, default: false },
           at: { type: Date, required: true },
           version: { type: String, required: true },
         },

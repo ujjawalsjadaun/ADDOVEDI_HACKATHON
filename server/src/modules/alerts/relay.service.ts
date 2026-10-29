@@ -10,14 +10,16 @@ import { RequestAlertModel } from './alert.model';
 
 const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-/** Donors in the coordinator's village who may be contacted: same village label (case-insensitive), contact consent, not under review. */
+/** Donors in the coordinator's village who opted in to relay: same village label (case-insensitive), contact + relay consent, not under review. */
 async function villageDonorIds(user: AuthUser): Promise<string[]> {
   const doc = await UserModel.findById(user.id).select('villageLabel');
   const village = doc?.villageLabel?.trim();
   if (!village) return [];
   const profiles = await DonorProfileModel.find({
     anchorLabel: new RegExp(`^${escapeRegex(village)}$`, 'i'),
+    // Opt-in only: the coordinator sees name and number before the donor has accepted anything.
     'consent.contact': true,
+    'consent.relay': true,
     reviewStatus: 'ok',
   }).select('userId');
   return profiles.map((p) => p.userId.toString());

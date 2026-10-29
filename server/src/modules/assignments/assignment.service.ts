@@ -6,7 +6,7 @@ import type {
   NoShowInput,
   RespondAlertResult,
 } from '@golden-hour/shared';
-import type { ClientSession, Types, UpdateQuery } from 'mongoose';
+import { Types, type ClientSession, type UpdateQuery } from 'mongoose';
 import { AppError } from '../../lib/errors';
 import { isDuplicateKeyError, withTransaction } from '../../lib/transaction';
 import { recordAudit, SYSTEM_ACTOR, userActor, type AuditActor } from '../audit/audit.service';
@@ -274,10 +274,61 @@ export async function markDonated(id: string, expectedVersion: number, ctx: Acti
     });
     await DonorProfileModel.updateOne({ userId: a.donorUserId }, { $set: { lastDonationAt: now, lastDonationKnown: true } }, { session });
     await recordAudit(auditOnRequest(userActor(ctx.user), a, 'assignment.donated', { requestId: ctx.requestId }), session);
-    return a;
+    const closed = await closeWhenFilled(session, a, ctx);
+    return { a, closed };
   });
-  announceAssignment(done);
-  return done;
+  announceAssignment(done.a);
+  // Donors whose alerts were cancelled by the closure see their lists change.
+  if (done.closed) publish('alert', done.closed.map((id) => rooms.user(id)), done.a.requestId);
+  return done.a;
+}
+
+/**
+ * "Closes itself once filled" (pitch slides 8, 9, 19), without giving up the rule that only the hospital
+ * decides fulfilment: the request closes as soon as the HOSPITAL has confirmed that every requested unit was
+ * donated. Donor reports, acceptances and slots being full never close anything by themselves. If fewer units
+ * arrive than requested, staff still close it manually with the actual number received.
+ */
+async function closeWhenFilled(session: ClientSession, a: AssignmentDocument, ctx: ActionContext): Promise<string[] | null> {
+  const request = await BloodRequestModel.findById(a.requestId).session(session);
+  if (!request || !['awaiting_donor', 'donors_assigned'].includes(request.requestStatus) || request.verificationStatus !== 'verified') return null;
+  const donated = await AssignmentModel.countDocuments({ requestId: request._id, status: 'donated' }).session(session);
+  if (donated < request.unitsRequested) return null;
+
+  const closedDoc = await BloodRequestModel.findOneAndUpdate(
+    { _id: request._id, requestStatus: { $in: ['awaiting_donor', 'donors_assigned'] } },
+    {
+      $set: {
+        requestStatus: 'closed',
+        isActive: false,
+        closure: {
+          reason: 'fulfilled',
+          by: new Types.ObjectId(ctx.user.id),
+          at: new Date(),
+          note: 'Closed automatically: the hospital confirmed the last requested unit as donated.',
+          unitsReceived: donated,
+        },
+      },
+      $inc: { version: 1 },
+    },
+    { new: true, session },
+  );
+  if (!closedDoc) return null;
+  const notified = await endForClosedRequest(session, closedDoc, 'fulfilled', 'request fulfilled — no longer needed');
+  await recordAudit(
+    {
+      actor: userActor(ctx.user),
+      action: 'request.fulfilled',
+      resourceType: 'bloodRequest',
+      resourceId: closedDoc._id,
+      facilityId: closedDoc.facilityId,
+      changes: { requestStatus: [request.requestStatus, 'closed'] },
+      detail: { unitsReceived: donated, unitsRequested: request.unitsRequested, automatic: true },
+      requestId: ctx.requestId,
+    },
+    session,
+  );
+  return notified;
 }
 
 export async function markNoShow(id: string, input: NoShowInput, ctx: ActionContext): Promise<{ assignment: AssignmentDocument; slotReleased: boolean }> {

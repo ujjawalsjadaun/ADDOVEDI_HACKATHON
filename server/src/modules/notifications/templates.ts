@@ -39,7 +39,22 @@ export interface FamilyLeadUpdateVars {
   ambulancePointText?: string;
 }
 
-export type TemplateVars = DonorAlertVars | RequestClosedVars | FamilyPhoneCodeVars | FamilyLeadUpdateVars;
+/** Sent to the facility's REGISTERED number (not the family's). Carries no family contact or patient detail. */
+export interface HospitalFamilyLeadVars {
+  facilityName: string;
+  reference: string;
+  bloodGroup?: string;
+}
+
+export interface AdminEscalationVars {
+  publicCode: string;
+  facilityName: string;
+  bloodGroup: string;
+  step: number;
+  elapsedMinutes: number;
+}
+
+export type TemplateVars = DonorAlertVars | RequestClosedVars | FamilyPhoneCodeVars | FamilyLeadUpdateVars | HospitalFamilyLeadVars | AdminEscalationVars;
 
 export function renderSms(type: NotificationType, vars: TemplateVars): string {
   switch (type) {
@@ -58,6 +73,16 @@ export function renderSms(type: NotificationType, vars: TemplateVars): string {
     case 'family_phone_code': {
       const v = vars as FamilyPhoneCodeVars;
       return `Golden Hour: your confirmation code is ${v.code}. Enter it on the page to confirm this number for your request to ${v.facilityName}. Never share it with anyone else.`;
+    }
+    case 'hospital_family_lead': {
+      const v = vars as HospitalFamilyLeadVars;
+      return `Golden Hour: a family has asked ${v.facilityName} for ${v.bloodGroup ? `${v.bloodGroup} ` : ''}blood (reference ${v.reference}). Open the hospital console to confirm or reject it. No donor is alerted until staff confirm. This text goes only to your registered number.`;
+    }
+    case 'admin_escalation': {
+      const v = vars as AdminEscalationVars;
+      return v.step >= 3
+        ? `Golden Hour: ${v.bloodGroup} request ${v.publicCode} at ${v.facilityName} is still open after ${v.elapsedMinutes} min with no donor. Please call nearby hospitals and blood banks.`
+        : `Golden Hour: ${v.bloodGroup} request ${v.publicCode} at ${v.facilityName} has had no donor for ${v.elapsedMinutes} min. The facility was told to check its own blood bank.`;
     }
     case 'family_lead_update': {
       const v = vars as FamilyLeadUpdateVars;

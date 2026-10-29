@@ -31,7 +31,7 @@ const transportTaskSchema = new Schema(
     pickup: { type: placeSchema, required: true },
     dropoff: { type: placeSchema, required: true },
     /** Relay: 1 = donor to the handover point, 2 = handover point to the hospital. `relayGroupId` is leg 1's id. */
-    relayLeg: { type: Number, enum: [1, 2, null], default: null },
+    relayLeg: { type: Number, min: 1, max: 2, default: null },
     relayGroupId: { type: Schema.Types.ObjectId, default: null },
     /** Leg 2 carries the donor's assignment for display only (the unique-open-pickup index stays on leg 1). */
     relayAssignmentId: { type: Schema.Types.ObjectId, default: null },

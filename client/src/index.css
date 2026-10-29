@@ -13,6 +13,10 @@
   --color-brand-900: #7f1d1d;
   --color-brand-950: #450a0a;
 
+  /* Small captions used across the app (text-2xs). Tailwind has no built-in size below xs. */
+  --text-2xs: 0.6875rem;
+  --text-2xs--line-height: 1rem;
+
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
 }
 
@@ -42,6 +46,10 @@
   }
   .btn-danger {
     @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white shadow-xs transition-all duration-150 hover:bg-rose-700 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50;
+  }
+  /* Compact inline field for toolbars and small forms (full-width form fields live in components/ui/form). */
+  .input {
+    @apply inline-block rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-2xs transition-all duration-150 placeholder:text-slate-400 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500/20;
   }
   .card {
     @apply rounded-xl border border-slate-200/90 bg-white p-5 shadow-xs transition-shadow duration-200 hover:shadow-sm;

@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { AccessPointInput, CreateRoadReportInput, MapData, RoadReportDecisionInput, RoadReportView } from '@golden-hour/shared';
+import type { AccessPointInput, CreateRoadReportInput, LatLng, MapData, NearestRoadResult, RoadReportDecisionInput, RoadReportView } from '@golden-hour/shared';
 import { api } from '../../lib/api/client';
 
 // Map, road reports and access points — shared by hospital, coordinator and admin areas.
@@ -46,5 +46,12 @@ export function useSetAccessPoint() {
     mutationFn: ({ facilityId, ...body }: AccessPointInput & { facilityId: string }) =>
       api(`/hospitals/${facilityId}/access-point`, { method: 'POST', body }),
     onSuccess: invalidate,
+  });
+}
+
+/** Nearest drivable road to a picked location (map data estimate; may be unavailable offline). */
+export function useNearestRoad() {
+  return useMutation({
+    mutationFn: async (location: LatLng) => (await api<NearestRoadResult>('/geo/nearest-road', { method: 'POST', body: { location } })).data,
   });
 }

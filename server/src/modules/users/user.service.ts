@@ -1,8 +1,9 @@
 import type { z } from 'zod';
-import type { CreateUserInput, listUsersQuerySchema, UserAdmin, UserStatusInput } from '@golden-hour/shared';
+import type { CreateUserInput, listUsersQuerySchema, UserAdmin, UserStatusInput, UserStrikeInput } from '@golden-hour/shared';
 import { AppError } from '../../lib/errors';
 import { isDuplicateKeyError, withTransaction } from '../../lib/transaction';
 import { recordAudit, userActor, type AuditActor } from '../audit/audit.service';
+import type { Config } from '../../config/env';
 import type { ActionContext } from '../auth/auth.types';
 import { hashPassword } from '../auth/password';
 import { HospitalModel } from '../hospitals/hospital.model';
@@ -127,4 +128,37 @@ export async function setUserStatus(id: string, input: UserStatusInput, ctx: Act
   });
   const names = await facilityNames([doc]);
   return toUserAdmin(doc, doc.facilityId ? (names.get(doc.facilityId.toString()) ?? null) : null);
+}
+
+/**
+ * Records a strike against a coordinator (pitch slide 13: "accountable: named, logged, strikes apply").
+ * At COORDINATOR_STRIKE_LIMIT the account is paused and every session revoked, in the same transaction;
+ * an administrator reviews and reactivates it. Audited.
+ */
+export async function recordUserStrike(id: string, input: UserStrikeInput, ctx: ActionContext, config: Config): Promise<UserAdmin> {
+  const doc = await withTransaction(async (session) => {
+    const current = await UserModel.findById(id).session(session);
+    if (!current || current.role !== 'coordinator') throw new AppError('NOT_FOUND', 'Not found.');
+    const strikes = (current.strikes ?? 0) + 1;
+    const pause = strikes >= config.COORDINATOR_STRIKE_LIMIT && current.status === 'active';
+    const updated = await UserModel.findByIdAndUpdate(
+      id,
+      { $set: { strikes, ...(pause && { status: 'paused' }) }, ...(pause && { $inc: { tokenVersion: 1 } }) },
+      { new: true, session },
+    );
+    await recordAudit(
+      {
+        actor: userActor(ctx.user),
+        action: 'user.strike',
+        resourceType: 'user',
+        resourceId: current._id,
+        reason: input.reason,
+        detail: { strikes, autoPaused: pause },
+        requestId: ctx.requestId,
+      },
+      session,
+    );
+    return updated!;
+  });
+  return toUserAdmin(doc, null);
 }

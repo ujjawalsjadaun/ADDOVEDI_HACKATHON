@@ -243,6 +243,8 @@ Validated with Zod at startup in `server/src/config/env.ts`. Server refuses to s
 | `HOSPITAL_STRIKE_LIMIT` | no | `3` | False-request strikes after which a verified facility is suspended automatically |
 | `NO_SHOW_GRACE_MIN` | no | `30` | Minutes past a donor's own ETA before an accepted/en-route donor is auto-released as `no_show` and the next donors are alerted |
 | `TWILIO_WEBHOOK_BASE_URL` | no | `PUBLIC_APP_URL` | Public base URL used to verify Twilio's webhook signature (set when a proxy changes the host) |
+| `COORDINATOR_STRIKE_LIMIT` | no | `3` | Strikes after which a coordinator's account is paused until an administrator reviews it |
+| `REPEAT_REQUEST_WINDOW_MIN` | no | `60` | Minutes after a request for a patient is fulfilled during which a new one for the same patient is refused (0 = off) |
 | `INBOUND_SMS_SECRET` | no | unset | ≥32 chars. Shared secret an SMS provider sends as `x-sms-secret` to `POST /api/sms/inbound`. Unset = that webhook answers 404 |
 | `OUTBOX_MAX_ATTEMPTS` | no | `5` | After this many failed attempts a message is marked failed |
 | `OUTBOX_POLL_MS` | no | `3000` | Outbox worker interval |

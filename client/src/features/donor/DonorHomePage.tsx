@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { lazy, Suspense, useState, type FormEvent } from 'react';
 import { Link } from 'react-router';
 import type { DonorAlertView, DonorAssignmentView } from '@golden-hour/shared';
 import { DataFreshness } from '../../components/ui/DataFreshness';
@@ -10,6 +10,9 @@ import { StatusBadge } from '../../components/ui/StatusBadge';
 import { formatDateTime, relativeTime } from '../../lib/format';
 import { ALERT_RESPONSE, ASSIGNMENT_STATUS } from '../../lib/labels';
 import { useDonorAlerts, useDonorAssignments, useDonorProfile, useReportAlert, useRespondAlert, useSetAvailability, useUpdateAssignment } from './api';
+
+/** Leaflet loads only when a donor actually has an accepted donation. */
+const DonorRouteMap = lazy(() => import('./DonorRouteMap'));
 
 export function DonorHomePage() {
   const profile = useDonorProfile();
@@ -62,7 +65,7 @@ export function DonorHomePage() {
 
       {/* ── ACTIVE ASSIGNMENTS ────────────────────────────────────── */}
       {active.map((a) => (
-        <ActiveAssignment key={a.id} assignment={a} />
+        <ActiveAssignment key={a.id} assignment={a} from={p.anchor ? { lat: p.anchor.lat, lng: p.anchor.lng } : null} />
       ))}
 
       {/* ── PENDING ALERTS QUEUE ──────────────────────────────────── */}
@@ -266,7 +269,7 @@ function PendingAlert({ alert, busy }: { alert: DonorAlertView; busy: boolean })
   );
 }
 
-function ActiveAssignment({ assignment: a }: { assignment: DonorAssignmentView }) {
+function ActiveAssignment({ assignment: a, from }: { assignment: DonorAssignmentView; from: { lat: number; lng: number } | null }) {
   const update = useUpdateAssignment();
   const [withdrawing, setWithdrawing] = useState(false);
   const [reason, setReason] = useState('');
@@ -315,6 +318,10 @@ function ActiveAssignment({ assignment: a }: { assignment: DonorAssignmentView }
           </dd>
         </div>
       </dl>
+
+      <Suspense fallback={<p className="text-xs text-slate-500">Loading map…</p>}>
+        <DonorRouteMap from={from} to={a.facility.location} hospitalName={a.facility.name} />
+      </Suspense>
 
       <div className="flex flex-wrap items-center gap-3">
         <a

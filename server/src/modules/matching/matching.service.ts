@@ -28,6 +28,16 @@ export interface MatchResult {
   manualReview: RankedCandidate[];
   alreadyAlerted: number;
   cooldownRelaxed: boolean;
+  /**
+   * True for the first batch: donors estimated to arrive AFTER the deadline are held back and only
+   * alerted when the search widens (escalation step 1 onward). Unknown travel time is never held back.
+   */
+  holdLate: boolean;
+}
+
+/** The candidates that may be alerted now, in rank order. */
+export function alertableNow(result: MatchResult): RankedCandidate[] {
+  return result.holdLate ? result.ranked.filter((c) => c.beforeDeadline !== false) : result.ranked;
 }
 
 const QUALITY_ORDER: Record<string, number> = { live: 0, cached: 1, simulated: 2, rough_estimate: 3, unavailable: 4 };
@@ -118,6 +128,7 @@ export async function matchDonors(
     manualReview: withRank(all.filter((c) => !known.has(c.donorUserId))),
     alreadyAlerted: alerted.length,
     cooldownRelaxed,
+    holdLate: opts.escalationStep < 1,
   };
 }
 
@@ -150,9 +161,12 @@ export function summariseReachability(ranked: Candidate[]): Reachability {
 
 export function toCandidatePreview(result: MatchResult): CandidatePreview {
   const strip = ({ profileId: _profileId, ...c }: RankedCandidate): Candidate => c;
-  const ranked = result.ranked.map(strip);
+  // Reachability counts everyone eligible (including those held back), so the summary stays honest.
+  const everyone = result.ranked.map(strip);
+  const ranked = alertableNow(result).map(strip);
   return {
-    reachability: summariseReachability(ranked),
+    reachability: summariseReachability(everyone),
+    heldForDeadline: everyone.length - ranked.length,
     ranked,
     manualReview: result.manualReview.map(strip),
     alreadyAlerted: result.alreadyAlerted,

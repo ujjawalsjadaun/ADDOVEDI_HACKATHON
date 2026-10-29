@@ -35,3 +35,7 @@ export const accessPointSchema = z.object({
   note: z.string().trim().max(200).optional(),
 });
 export type AccessPointInput = z.infer<typeof accessPointSchema>;
+
+/** Where to look for the nearest drivable road (e.g. the village or patient location picked on the map). */
+export const nearestRoadSchema = z.object({ location: latLngSchema });
+export type NearestRoadInput = z.infer<typeof nearestRoadSchema>;

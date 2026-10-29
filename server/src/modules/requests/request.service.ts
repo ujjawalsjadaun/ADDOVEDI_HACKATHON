@@ -23,7 +23,7 @@ import { isDuplicateKeyError, withTransaction } from '../../lib/transaction';
 import { recordAudit, userActor } from '../audit/audit.service';
 import { alertNextBatch, insertAlertBatch, matchFirstBatch, summariseAlerts } from '../alerts/alert.service';
 import { endForClosedRequest, listForHospital } from '../assignments/assignment.service';
-import { matchDonors, toCandidatePreview } from '../matching/matching.service';
+import { alertableNow, matchDonors, toCandidatePreview } from '../matching/matching.service';
 import { publish, rooms } from '../../realtime/emitter';
 import { assertFacilityScope } from '../auth/auth.policy';
 import type { ActionContext, AuthUser } from '../auth/auth.types';
@@ -164,6 +164,23 @@ export async function createRequest(
   }
 
   const refHash = patientRefHash(config, user.facilityId, input.patientRef);
+  // Pitch slide 14: repeats within a set window are blocked. Only after a request was FULFILLED: a cancelled or
+  // rejected one can be re-raised straight away (e.g. to correct a mistake).
+  if (config.REPEAT_REQUEST_WINDOW_MIN > 0) {
+    const recent = await BloodRequestModel.findOne({
+      facilityId: user.facilityId,
+      patientRefHash: refHash,
+      'closure.reason': 'fulfilled',
+      'closure.at': { $gte: new Date(Date.now() - config.REPEAT_REQUEST_WINDOW_MIN * 60_000) },
+    }).select('publicCode');
+    if (recent) {
+      throw new AppError(
+        'ACTIVE_REQUEST_EXISTS',
+        `A request for this patient (${recent.publicCode}) was fulfilled in the last ${config.REPEAT_REQUEST_WINDOW_MIN} minutes. If more blood is needed, ask an administrator.`,
+        { fields: { existingPublicCode: recent.publicCode } },
+      );
+    }
+  }
   const similar = await findSimilar({ facilityId: user.facilityId, bloodGroup: input.bloodGroup, patientRefHash: refHash, deadlineAt });
   const possibleDuplicate = similar.length > 0;
 
@@ -320,7 +337,7 @@ export async function verifyRequest(id: string, input: VerifyRequestInput, ctx: 
       session,
     );
     // No donor is contacted before this point (docs/state-machines.md §2).
-    alerted = await insertAlertBatch(session, { request: doc, candidates: firstBatch.ranked, batch: 0, actor: userActor(ctx.user), requestId: ctx.requestId, config });
+    alerted = await insertAlertBatch(session, { request: doc, candidates: alertableNow(firstBatch), batch: 0, actor: userActor(ctx.user), requestId: ctx.requestId, config });
     // Escalation ladder step 0 (docs/state-machines.md §5) is this first batch; the worker runs steps 1+.
     await EscalationEventModel.create(
       [{ requestId: doc._id, step: 0, outcome: alerted.length > 0 ? 'executed' : 'skipped_condition_not_met', detail: { alerted: alerted.length }, at: now }],

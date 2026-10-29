@@ -14,6 +14,7 @@ import { DonorProfileModel } from '../donors/donor.model';
 import { BloodRequestModel } from '../requests/request.model';
 import { UserModel } from '../users/user.model';
 import { FamilyLeadModel } from '../leads/familyLead.model';
+import { HospitalModel } from '../hospitals/hospital.model';
 import { OutboxModel, type OutboxDocument } from './outbox.model';
 import { renderSms, type TemplateVars } from './templates';
 
@@ -36,6 +37,8 @@ export async function enqueueNotification(
     recipientUserId?: Types.ObjectId | string;
     /** Family leads have no account: their number is read from the lead when the message is sent. */
     recipientLeadId?: Types.ObjectId | string;
+    /** The facility's registered phone, read when the message is sent. */
+    recipientHospitalId?: Types.ObjectId | string;
     requestId?: Types.ObjectId | null;
     vars: TemplateVars;
   },
@@ -49,6 +52,7 @@ export async function enqueueNotification(
         channel: 'sms',
         recipientUserId: n.recipientUserId ?? null,
         recipientLeadId: n.recipientLeadId ?? null,
+        recipientHospitalId: n.recipientHospitalId ?? null,
         requestId: n.requestId ?? null,
         vars: n.vars,
         status: 'pending',
@@ -105,8 +109,21 @@ async function sendToLead(msg: OutboxDocument, config: Config): Promise<void> {
   return finish(msg, { status: 'pending', lastError: result.errorCode, nextAttemptAt: new Date(Date.now() + backoffMs(msg.attempts)) });
 }
 
+async function sendToHospital(msg: OutboxDocument, config: Config): Promise<void> {
+  const hospital = await HospitalModel.findById(msg.recipientHospitalId).select('registeredPhone verificationStatus').lean();
+  if (!hospital?.registeredPhone) return finish(msg, { status: 'failed', lastError: 'NO_PHONE_NUMBER' });
+  const body = renderSms(msg.type, msg.vars as TemplateVars);
+  const result = await getSmsProvider(config)
+    .send({ to: hospital.registeredPhone, body, idempotencyKey: msg.eventId })
+    .catch((err: unknown) => ({ status: 'failed' as const, errorCode: err instanceof Error ? err.message.slice(0, 120) : 'SEND_ERROR', permanent: false }));
+  if (result.status === 'accepted') return finish(msg, { status: 'sent', providerMessageId: result.providerMessageId, sentAt: new Date(), lastError: null });
+  if (result.permanent || msg.attempts >= config.OUTBOX_MAX_ATTEMPTS) return finish(msg, { status: 'failed', lastError: result.errorCode });
+  return finish(msg, { status: 'pending', lastError: result.errorCode, nextAttemptAt: new Date(Date.now() + backoffMs(msg.attempts)) });
+}
+
 async function sendOne(msg: OutboxDocument, config: Config): Promise<void> {
   if (msg.recipientLeadId) return sendToLead(msg, config);
+  if (msg.recipientHospitalId) return sendToHospital(msg, config);
   const [user, profile] = await Promise.all([
     UserModel.findById(msg.recipientUserId).select('phone status').lean(),
     DonorProfileModel.findOne({ userId: msg.recipientUserId }).select('consent').lean(),
@@ -158,17 +175,19 @@ export async function listNotifications(query: { status?: NotificationStatus; pa
     OutboxModel.find(filter).sort({ createdAt: -1 }).skip((query.page - 1) * query.limit).limit(query.limit),
     OutboxModel.countDocuments(filter),
   ]);
-  const [users, leads, requests] = await Promise.all([
+  const [users, leads, hospitals, requests] = await Promise.all([
     UserModel.find({ _id: { $in: rows.map((r) => r.recipientUserId).filter(Boolean) } }).select('name phone').lean(),
     FamilyLeadModel.find({ _id: { $in: rows.map((r) => r.recipientLeadId).filter(Boolean) } }).select('contactName contactPhone').lean(),
+    HospitalModel.find({ _id: { $in: rows.map((r) => r.recipientHospitalId).filter(Boolean) } }).select('name registeredPhone').lean(),
     BloodRequestModel.find({ _id: { $in: rows.map((r) => r.requestId).filter(Boolean) } }).select('publicCode').lean(),
   ]);
   const userById = new Map(users.map((u) => [u._id.toString(), { name: u.name as string | undefined, phone: u.phone as string | undefined }]));
   for (const l of leads) userById.set(l._id.toString(), { name: `${l.contactName} (family)`, phone: l.contactPhone });
+  for (const h of hospitals) userById.set(h._id.toString(), { name: `${h.name} (registered number)`, phone: h.registeredPhone });
   const codeById = new Map(requests.map((r) => [r._id.toString(), r.publicCode]));
   return {
     items: rows.map((r) => {
-      const u = userById.get((r.recipientUserId ?? r.recipientLeadId)?.toString() ?? '');
+      const u = userById.get((r.recipientUserId ?? r.recipientLeadId ?? r.recipientHospitalId)?.toString() ?? '');
       return {
         id: r._id.toString(),
         eventId: r.eventId,

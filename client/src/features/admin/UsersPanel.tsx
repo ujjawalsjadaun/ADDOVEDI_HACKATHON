@@ -6,7 +6,7 @@ import { EmptyState, ErrorState, LoadingState } from '../../components/ui/states
 import { StatusBadge } from '../../components/ui/StatusBadge';
 import { useMe } from '../auth/api';
 import { ROLE_LABEL } from '../auth/roleHome';
-import { useAdminHospitals, useAdminUsers, useCreateUser, useUserStatus } from './api';
+import { useAdminHospitals, useAdminUsers, useCreateUser, useUserStatus, useUserStrike } from './api';
 
 const ROLE_FILTERS: { value: UserRole | ''; label: string }[] = [
   { value: '', label: 'All roles' },
@@ -75,6 +75,8 @@ function UserRow({ user }: { user: UserAdmin }) {
   const me = useMe();
   const [pending, setPending] = useState<UserStatus | null>(null);
   const change = useUserStatus();
+  const strike = useUserStrike();
+  const [striking, setStriking] = useState(false);
   const isSelf = me.data?.user.id === user.id;
   const action = STATUS_ACTIONS[user.status].find((a) => a.status === pending);
 
@@ -85,6 +87,11 @@ function UserRow({ user }: { user: UserAdmin }) {
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="text-base font-bold text-slate-900">{user.name}</h3>
             <StatusBadge status={user.status} />
+            {user.strikes > 0 && (
+              <span className="rounded-full bg-rose-50 px-2 py-0.5 text-2xs font-semibold text-rose-700">
+                {user.strikes} strike{user.strikes === 1 ? '' : 's'}
+              </span>
+            )}
             {isSelf && (
               <span className="rounded-full bg-slate-100 px-2 py-0.5 text-2xs font-semibold text-slate-600">
                 Current Session
@@ -114,7 +121,7 @@ function UserRow({ user }: { user: UserAdmin }) {
             <strong className="text-slate-600">{user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleString() : 'never'}</strong>
           </p>
         </div>
-        {!pending && !isSelf && (
+        {!pending && !striking && !isSelf && (
           <div className="flex gap-2">
             {STATUS_ACTIONS[user.status].map((a) => (
               <button
@@ -129,9 +136,25 @@ function UserRow({ user }: { user: UserAdmin }) {
                 {a.label}
               </button>
             ))}
+            {user.role === 'coordinator' && user.status === 'active' && (
+              <button type="button" className="btn-secondary text-red-700" onClick={() => { strike.reset(); setStriking(true); }}>
+                Record strike
+              </button>
+            )}
           </div>
         )}
       </div>
+      {striking && (
+        <ReasonForm
+          title={`Record a strike against ${user.name}? At the limit the account is paused until an administrator reviews it.`}
+          confirmLabel="Record strike"
+          danger
+          pending={strike.isPending}
+          error={strike.error}
+          onCancel={() => setStriking(false)}
+          onConfirm={(reason) => strike.mutate({ id: user.id, reason }, { onSuccess: () => setStriking(false) })}
+        />
+      )}
       {action && (
         <ReasonForm
           title={`${action.label} ${user.name}? ${action.status === 'active' ? '' : 'They will be signed out everywhere.'}`}

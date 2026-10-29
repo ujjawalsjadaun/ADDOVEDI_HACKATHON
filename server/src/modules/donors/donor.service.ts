@@ -47,7 +47,7 @@ export async function registerDonor(input: RegisterDonorInput, httpRequestId: st
           {
             userId: created!._id,
             bloodGroup: input.bloodGroup,
-            consent: { contact: input.consent.contact, location: input.consent.location, at: new Date(), version: DONOR_CONSENT_VERSION },
+            consent: { contact: input.consent.contact, location: input.consent.location, relay: input.consent.relay ?? false, at: new Date(), version: DONOR_CONSENT_VERSION },
           },
         ],
         { session },
@@ -92,7 +92,8 @@ export async function updateOwnProfile(input: UpdateDonorProfileInput, ctx: Acti
   // Without location consent no location is kept at all.
   const anchor = input.consent.location && input.anchor ? input.anchor : null;
   const groupChanged = input.bloodGroup !== profile.bloodGroup;
-  const consentChanged = input.consent.contact !== profile.consent.contact || input.consent.location !== profile.consent.location;
+  const relay = input.consent.relay ?? profile.consent.relay ?? false;
+  const consentChanged = input.consent.contact !== profile.consent.contact || input.consent.location !== profile.consent.location || relay !== (profile.consent.relay ?? false);
 
   const updated = await withTransaction(async (session) => {
     const doc = await DonorProfileModel.findOneAndUpdate(
@@ -106,7 +107,7 @@ export async function updateOwnProfile(input: UpdateDonorProfileInput, ctx: Acti
           anchorLabel: anchor ? anchor.label : null,
           // A changed blood group must be re-verified before any alert.
           ...(groupChanged && { verificationStatus: 'unverified' }),
-          ...(consentChanged && { consent: { ...input.consent, at: new Date(), version: DONOR_CONSENT_VERSION } }),
+          ...(consentChanged && { consent: { contact: input.consent.contact, location: input.consent.location, relay, at: new Date(), version: DONOR_CONSENT_VERSION } }),
         },
       },
       { new: true, session },

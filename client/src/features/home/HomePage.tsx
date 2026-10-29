@@ -65,7 +65,7 @@ export function HomePage() {
       </section>
 
       {/* ── PROBLEM STRIP ────────────────────────────────────────── */}
-      <section className="grid gap-4 sm:grid-cols-3" aria-label="The problem">
+      {/* <section className="grid gap-4 sm:grid-cols-3" aria-label="The problem">
         {[
           ['Distance is not reachability', 'A donor 5 km away across a ridge can be hours from the hospital by road.'],
           ['Forwards lose trust', 'Old or fake requests circulate. People need a way to check one in seconds.'],
@@ -77,7 +77,7 @@ export function HomePage() {
             <p className="mt-1.5 text-sm leading-relaxed text-slate-600">{body}</p>
           </div>
         ))}
-      </section>
+      </section> */}
 
       {/* ── HOW IT WORKS ─────────────────────────────────────────── */}
       <section className="space-y-6">
@@ -94,18 +94,18 @@ export function HomePage() {
             </li>
           ))}
         </ol>
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl bg-slate-950 px-5 py-4 text-sm text-slate-200">
+        {/* <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl bg-slate-950 px-5 py-4 text-sm text-slate-200">
           <span className="eyebrow text-brand-300">If nobody accepts</span>
           {['0 min · first donors alerted', '5 min · search widens', '10 min · hospital told to check its blood bank', '15 min · administrators step in', 'Planned needs: timers run 3× slower'].map((t) => (
             <span key={t} className="rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs font-semibold">
               {t}
             </span>
           ))}
-        </div>
+        </div> */}
       </section>
 
       {/* ── GUARANTEES ───────────────────────────────────────────── */}
-      <section className="space-y-6">
+      {/* <section className="space-y-6">
         <div className="max-w-2xl">
           <p className="eyebrow text-brand-700">Safety rules built in</p>
           <h2 className="mt-1 text-3xl font-black tracking-tight text-slate-900">What the system will not do</h2>
@@ -125,7 +125,7 @@ export function HomePage() {
             </li>
           ))}
         </ul>
-      </section>
+      </section> */}
 
       {/* ── PORTALS ──────────────────────────────────────────────── */}
       <section className="space-y-6">

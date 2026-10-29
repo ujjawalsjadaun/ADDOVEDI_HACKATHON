@@ -33,6 +33,7 @@ export const registerDonorSchema = z.object({
   consent: z.object({
     contact: z.literal(true, { message: 'you must agree to be contacted to register as a donor' }),
     location: z.boolean(),
+    relay: z.boolean().optional(),
   }),
 });
 export type RegisterDonorInput = z.infer<typeof registerDonorSchema>;
@@ -42,7 +43,7 @@ export const updateDonorProfileSchema = z.object({
   /** `null` = never donated. "I don't know" is a separate, deliberate action (POST /donors/me/last-donation-unknown). */
   lastDonationOn: isoDate.nullable(),
   anchor: donorAnchorSchema.nullable(),
-  consent: z.object({ contact: z.boolean(), location: z.boolean() }),
+  consent: z.object({ contact: z.boolean(), location: z.boolean(), relay: z.boolean().optional() }),
 });
 export type UpdateDonorProfileInput = z.infer<typeof updateDonorProfileSchema>;
 

@@ -4,6 +4,7 @@ import { isDbConnected } from '../lib/db';
 import { isDuplicateKeyError } from '../lib/transaction';
 import { SYSTEM_ACTOR, recordAudit } from '../modules/audit/audit.service';
 import { alertNextBatch } from '../modules/alerts/alert.service';
+import { queueAdminEscalationTexts } from '../modules/notifications/adminAlerts';
 import { BloodRequestModel } from '../modules/requests/request.model';
 import { EscalationEventModel } from '../modules/requests/escalationEvent.model';
 import { publish, rooms } from '../realtime/emitter';
@@ -119,6 +120,9 @@ export async function processEscalations(config: Config, logger: Logger): Promis
             detail: { stepMinutes, elapsedMinutes: Math.round(elapsedMin) },
           });
 
+          await queueAdminEscalationTexts(request, 2, Math.round(elapsedMin)).catch((err: unknown) =>
+            logger.warn({ err, requestId: request._id.toString() }, 'could not queue admin escalation texts (step 2)'),
+          );
           publish('request', [rooms.facility(request.facilityId), rooms.role('admin')], request._id);
           processedCount++;
           logger.info({ requestId: request._id, publicCode: request.publicCode, step: 2 }, 'escalation step 2 executed');
@@ -152,6 +156,9 @@ export async function processEscalations(config: Config, logger: Logger): Promis
             detail: { stepMinutes, elapsedMinutes: Math.round(elapsedMin) },
           });
 
+          await queueAdminEscalationTexts(request, 3, Math.round(elapsedMin)).catch((err: unknown) =>
+            logger.warn({ err, requestId: request._id.toString() }, 'could not queue admin escalation texts (step 3)'),
+          );
           publish('request', [rooms.facility(request.facilityId), rooms.role('admin')], request._id);
           processedCount++;
           logger.info({ requestId: request._id, publicCode: request.publicCode, step: 3 }, 'escalation step 3 executed');

@@ -9,6 +9,7 @@ import type {
   HospitalStrikeInput,
   MissedCallInput,
   SmsReplyInput,
+  UserStrikeInput,
   SmsReplyResult,
   NotificationView,
   RequestSummary,
@@ -225,3 +226,11 @@ export function useAdminEscalations(filter: { open?: 'true' | 'false' } = {}) {
   });
 }
 
+
+export function useUserStrike() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ...input }: UserStrikeInput & { id: string }) => (await api<UserAdmin>(`/admin/users/${id}/strike`, { method: 'POST', body: input })).data,
+    onSettled: () => queryClient.invalidateQueries({ queryKey: USERS_KEY }),
+  });
+}

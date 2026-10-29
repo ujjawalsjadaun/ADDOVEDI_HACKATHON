@@ -8,6 +8,7 @@ export function toUserAdmin(doc: UserDocument, facilityName: string | null): Use
     ...toSafeUser(toAuthUser(doc)),
     phoneMasked: maskPhone(doc.phone),
     villageLabel: doc.villageLabel ?? null,
+    strikes: doc.strikes ?? 0,
     facilityName,
     lastLoginAt: doc.lastLoginAt ? doc.lastLoginAt.toISOString() : null,
     createdAt: (doc.get('createdAt') as Date).toISOString(),

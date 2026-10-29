@@ -9,6 +9,8 @@ const userSchema = new Schema(
     phone: { type: String },
     /** Coordinators: the village they relay alerts for (matched to a donor's anchor label). */
     villageLabel: { type: String, default: null },
+    /** Strikes recorded by administrators; used for coordinators (named, accountable local authority). */
+    strikes: { type: Number, default: 0 },
     role: { type: String, enum: USER_ROLES, required: true },
     facilityId: { type: Schema.Types.ObjectId, ref: 'Hospital', default: null },
     canVerifyRequests: { type: Boolean, default: false },

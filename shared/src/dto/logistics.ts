@@ -92,7 +92,7 @@ export interface SurplusOfferView {
 
 /**
  * An open donor alert in a coordinator's village, for relaying it to a donor who has no data.
- * Only donors who consented to contact and chose this village appear; only while the alert is still open.
+ * Only donors who chose this village and opted in to village relay appear; only while the alert is still open.
  */
 export interface RelayAlertView {
   alertId: string;

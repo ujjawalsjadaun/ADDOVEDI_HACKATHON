@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
-import type { LatLng, MapFacility } from '@golden-hour/shared';
+import type { LatLng, MapFacility, NearestRoadResult } from '@golden-hour/shared';
 import { FormError, SelectField, TextField } from '../../../components/ui/form';
-import { useSetAccessPoint } from '../api';
+import { useNearestRoad, useSetAccessPoint } from '../api';
 
 /** Sets the nearest point an ambulance/vehicle can reach for a facility (a reported estimate). */
 export function AccessPointForm({
@@ -16,12 +16,15 @@ export function AccessPointForm({
   const save = useSetAccessPoint();
   const [facilityId, setFacilityId] = useState(facilities[0]?.id ?? '');
   const [note, setNote] = useState('');
+  const nearest = useNearestRoad();
+  const [accepted, setAccepted] = useState<NearestRoadResult | null>(null);
+  const point = accepted?.point ?? picked;
   const facility = facilities.find((f) => f.id === facilityId);
 
   function onSubmit(e: FormEvent) {
     e.preventDefault();
-    if (!picked || !facilityId) return;
-    save.mutate({ facilityId, location: picked, note: note || undefined }, { onSuccess: onDone });
+    if (!point || !facilityId) return;
+    save.mutate({ facilityId, location: point, note: note || undefined }, { onSuccess: onDone });
   }
 
   return (
@@ -38,6 +41,38 @@ export function AccessPointForm({
         )}
       </p>
       <FormError error={save.error} />
+      {picked && (
+        <div className="space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
+          <button
+            type="button"
+            className="btn-secondary text-xs"
+            disabled={nearest.isPending}
+            onClick={() => {
+              setAccepted(null);
+              nearest.mutate(picked);
+            }}
+          >
+            {nearest.isPending ? 'Looking up roads…' : 'Suggest nearest drivable road'}
+          </button>
+          <FormError error={nearest.error} />
+          {nearest.data && (
+            <div className="space-y-1 text-xs text-slate-700">
+              <p>
+                <strong>{nearest.data.distanceM} m</strong> from your pin{nearest.data.roadName ? <> on <strong>{nearest.data.roadName}</strong></> : null} (
+                {nearest.data.source === 'openrouteservice' ? 'OpenRouteService' : 'OpenStreetMap'}).
+              </p>
+              <p className="text-slate-500">{nearest.data.note}</p>
+              {accepted ? (
+                <p className="font-semibold text-emerald-800">Using the suggested point.</p>
+              ) : (
+                <button type="button" className="btn-primary text-xs" onClick={() => setAccepted(nearest.data)}>
+                  Use this point
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      )}
       {facilities.length > 1 && (
         <SelectField
           label="Facility"
@@ -48,7 +83,7 @@ export function AccessPointForm({
       )}
       <TextField label="Note (optional)" placeholder="e.g. road ends at the bridge; 300 m on foot" maxLength={200} value={note} onChange={(e) => setNote(e.target.value)} />
       <div className="flex flex-wrap gap-2">
-        <button type="submit" className="btn-primary" disabled={!picked || save.isPending}>
+        <button type="submit" className="btn-primary" disabled={!point || save.isPending}>
           {save.isPending ? 'Saving…' : 'Save access point'}
         </button>
         {facility?.accessPoint && (

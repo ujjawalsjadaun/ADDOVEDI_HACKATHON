@@ -29,6 +29,7 @@ function ProfileForm({ profile }: { profile: DonorProfileView }) {
     lng: profile.anchor ? String(profile.anchor.lng) : '',
     contact: profile.consent.contact,
     location: profile.consent.location,
+    relay: profile.consent.relay,
   });
   const set = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) => {
     setSaved(false);
@@ -60,7 +61,7 @@ function ProfileForm({ profile }: { profile: DonorProfileView }) {
         bloodGroup: form.bloodGroup,
         lastDonationOn: form.donated === 'never' ? null : form.lastDonationOn,
         anchor,
-        consent: { contact: form.contact, location: form.location },
+        consent: { contact: form.contact, location: form.location, relay: form.relay },
       },
       { onSuccess: () => setSaved(true) },
     );
@@ -215,6 +216,14 @@ function ProfileForm({ profile }: { profile: DonorProfileView }) {
             checked={form.contact}
             onChange={(e) => set('contact', e.target.checked)}
           />
+          <div className="mt-3">
+            <CheckboxField
+              label="A trusted village coordinator may pass alerts on to me"
+              hint="If you often have no mobile data, a coordinator for your village (same village name as above) can see your name and number while an alert is open, and tell you by phone. You still answer for yourself. Off by default."
+              checked={form.relay}
+              onChange={(e) => set('relay', e.target.checked)}
+            />
+          </div>
         </div>
 
         <button type="submit" className="btn-primary min-h-11 px-6" disabled={save.isPending}>

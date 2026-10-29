@@ -69,6 +69,10 @@ const envSchema = z
     HOSPITAL_STRIKE_LIMIT: intIn(1, 20).default(3),
     /** Minutes after a donor's estimated arrival before the slot is released automatically. */
     NO_SHOW_GRACE_MIN: intIn(0, 240).default(30),
+    /** Strikes after which a coordinator's account is paused until an administrator reviews it. */
+    COORDINATOR_STRIKE_LIMIT: intIn(1, 20).default(3),
+    /** A new request for the same patient is refused for this many minutes after one was fulfilled (0 = off). */
+    REPEAT_REQUEST_WINDOW_MIN: intIn(0, 1440).default(60),
     ALERT_BATCH_SIZE: intIn(1, 20).default(3),
     ALERT_RESPONSE_WINDOW_MIN: intIn(1, 120).default(5),
     DONATION_REST_DAYS: intIn(1, 365).default(90),

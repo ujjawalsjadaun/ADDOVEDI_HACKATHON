@@ -7,7 +7,7 @@
 export const NOTIFICATION_STATUSES = ['pending', 'sending', 'sent', 'delivered', 'failed', 'unknown'] as const;
 export type NotificationStatus = (typeof NOTIFICATION_STATUSES)[number];
 
-export const NOTIFICATION_TYPES = ['donor_alert', 'request_closed_for_donor', 'family_phone_code', 'family_lead_update'] as const;
+export const NOTIFICATION_TYPES = ['donor_alert', 'request_closed_for_donor', 'family_phone_code', 'family_lead_update', 'hospital_family_lead', 'admin_escalation'] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 
 export interface NotificationView {

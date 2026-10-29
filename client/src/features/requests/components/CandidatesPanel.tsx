@@ -34,6 +34,11 @@ export function CandidatesPanel({ request }: { request: RequestDetail }) {
               {candidates.data.cooldownRelaxed ? '. Contact cooldown relaxed for escalation batches.' : '.'} Ranked by deadline feasibility, then road distance.
             </div>
             <ReachabilityBars r={candidates.data.reachability} />
+            {candidates.data.heldForDeadline > 0 && (
+              <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+                {candidates.data.heldForDeadline} eligible donor{candidates.data.heldForDeadline === 1 ? ' is' : 's are'} estimated to arrive after the deadline and will only be alerted if the search widens.
+              </p>
+            )}
             <CandidateList title="Next in dispatch queue" items={candidates.data.ranked} empty="No eligible donors available at this moment." />
             {candidates.data.manualReview.length > 0 && (
               <CandidateList

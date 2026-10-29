@@ -86,6 +86,13 @@ export async function submitFamilyLead(input: CreateFamilyLeadInput, httpRequest
           recipientLeadId: created!._id,
           vars: { code, facilityName: hospital.name },
         });
+        // The hospital is asked on ITS registered number, never the family's (slide 15, step 3).
+        await enqueueNotification(session, {
+          eventId: `lead:${created!._id.toString()}:hospital`,
+          type: 'hospital_family_lead',
+          recipientHospitalId: hospital._id,
+          vars: { facilityName: hospital.name, reference: created!.reference, bloodGroup: input.bloodGroup },
+        });
         return created!;
       });
       return { reference: lead.reference, status: 'pending', facilityName: hospital.name, phoneVerificationRequired: true };

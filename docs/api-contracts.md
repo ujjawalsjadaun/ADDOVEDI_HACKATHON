@@ -325,3 +325,21 @@ Point a Twilio number's *messaging* webhook at `POST {PUBLIC_APP_URL}/api/twilio
 - `/sms`: an incoming text goes through the same handler as the JSON webhook (donor YES/NO, `BLOOD …` family request, 6-digit code); `replyText` is returned as TwiML.
 - `/voice`: the call is rejected (free for the caller) and counts as a missed call = "available today".
 Sent messages still show `sent` (Twilio accepted), never `delivered`: delivery receipts are not wired.
+
+### Nearest drivable road (pitch slide 22: "nearest ambulance point from map roads")
+| Method & path | Role | Notes |
+| --- | --- | --- |
+| `POST /geo/nearest-road` | HOS, COO, ADM | `{ location }` → `NearestRoadResult { point, distanceM, roadName, source, note }`. OpenRouteService snap when a key is configured, else OpenStreetMap roads via Overpass (tracks and paths excluded; 3 km search). 503 if neither is reachable, 404 if no road within 3 km: the manual map click still works. 30 per 10 min per user |
+
+### Coordinator strikes
+| Method & path | Role | Notes |
+| --- | --- | --- |
+| `POST /admin/users/:id/strike` | ADM | `{ reason }` → `UserAdmin` (with `strikes`). Coordinators only. At `COORDINATOR_STRIKE_LIMIT` the account is paused and all sessions revoked in the same transaction; audited `user.strike` |
+
+`POST /requests` refuses (409 `ACTIVE_REQUEST_EXISTS`) a request for a patient whose previous request was **fulfilled** within `REPEAT_REQUEST_WINDOW_MIN` minutes.
+
+### Hospital and admin texts (pitch slide 15 step 3, slide 18)
+New outbox types, visible in *Admin → Notifications* like every other message:
+- `hospital_family_lead`: when a family request arrives, the facility's **registered** number is texted (reference and blood group only; no family contact, no patient). The family is never asked to confirm for the hospital.
+- `admin_escalation`: at escalation steps 2 and 3, every active administrator with a phone is texted. One message per admin per step.
+The outbox gained `recipientHospitalId`; the facility's phone is read at send time like every other recipient.

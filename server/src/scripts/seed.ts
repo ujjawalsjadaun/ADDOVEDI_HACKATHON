@@ -143,7 +143,8 @@ for (const d of DONORS) {
   await DonorProfileModel.create({
     userId: user._id,
     bloodGroup: d.group,
-    consent: { contact: true, location: true, at: new Date(), version: DONOR_CONSENT_VERSION },
+    // donor2 serves the demo coordinator's village and has opted in to relay, so that screen has something to show.
+    consent: { contact: true, location: true, relay: d.email === 'donor2@demo.test', at: new Date(), version: DONOR_CONSENT_VERSION },
     availability: 'available',
     availabilityUpdatedAt: new Date(),
     lastDonationKnown: known,
@@ -153,6 +154,15 @@ for (const d of DONORS) {
     verificationStatus: d.verified ? 'verified' : 'unverified',
   });
   created.push(`donor ${d.email} ${d.group} — ${d.note}`);
+}
+
+// Profiles seeded before the relay consent existed: give donor2 the opt-in once (never overrides a later choice).
+{
+  const donor2 = await UserModel.findOne({ email: 'donor2@demo.test' }).select('_id');
+  if (donor2) {
+    const r = await DonorProfileModel.updateOne({ userId: donor2._id, 'consent.relay': { $exists: false } }, { $set: { 'consent.relay': true } });
+    if (r.modifiedCount) created.push('donor2 opted in to village relay');
+  }
 }
 
 // ── one pending request, so a verifier can try the verification step ─────────

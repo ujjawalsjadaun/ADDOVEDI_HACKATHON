@@ -51,3 +51,14 @@ export interface MapData {
   /** Reports of these conditions within this distance of a route make its ETA "unknown". */
   closureCorridorKm: number;
 }
+
+/** Nearest point on a drivable road to a picked location. An estimate from map data, never live or surveyed. */
+export interface NearestRoadResult {
+  point: LatLng;
+  /** Straight-line metres from the picked location to `point`. */
+  distanceM: number;
+  roadName: string | null;
+  source: 'openrouteservice' | 'openstreetmap';
+  /** Always shown with the result: what this is and is not. */
+  note: string;
+}

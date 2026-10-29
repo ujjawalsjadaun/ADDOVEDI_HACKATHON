@@ -17,7 +17,7 @@ export function adminRoutes(config: Config): Router {
   router.use(requireRole('admin'));
   router.use('/overview', adminOverviewRoutes(config));
   router.use('/hospitals', adminHospitalRoutes(config));
-  router.use('/users', adminUserRoutes());
+  router.use('/users', adminUserRoutes(config));
   router.use('/donors', adminDonorRoutes());
   router.use('/escalations', adminEscalationRoutes());
   router.use('/audit', adminAuditRoutes());
